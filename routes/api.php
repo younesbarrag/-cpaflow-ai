@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -20,5 +21,8 @@ Route::prefix('v1')->group(function () {
 
         Route::get('/auth/user', [AuthController::class, 'user'])
             ->name('api.v1.auth.user');
+
+        Route::patch('/profile', [ProfileController::class, 'update'])
+            ->name('api.v1.profile.update');
     });
 });

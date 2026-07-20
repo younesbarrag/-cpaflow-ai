@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Models\User;
 
 test('profile page is displayed', function () {
@@ -10,6 +11,12 @@ test('profile page is displayed', function () {
         ->get('/profile');
 
     $response->assertOk();
+});
+
+test('guest cannot access profile page', function () {
+    $response = $this->get('/profile');
+
+    $response->assertRedirect('/login');
 });
 
 test('profile information can be updated', function () {
@@ -33,6 +40,20 @@ test('profile information can be updated', function () {
     $this->assertNull($user->email_verified_at);
 });
 
+test('email is normalized', function () {
+    $user = User::factory()->create(['email' => 'user@example.com']);
+
+    $this
+        ->actingAs($user)
+        ->patch('/profile', [
+            'name' => 'Test User',
+            'email' => '  User@Example.COM  ',
+        ]);
+
+    $user->refresh();
+    $this->assertSame('user@example.com', $user->email);
+});
+
 test('email verification status is unchanged when the email address is unchanged', function () {
     $user = User::factory()->create();
 
@@ -48,6 +69,35 @@ test('email verification status is unchanged when the email address is unchanged
         ->assertRedirect('/profile');
 
     $this->assertNotNull($user->refresh()->email_verified_at);
+});
+
+test('duplicate email is rejected', function () {
+    User::factory()->create(['email' => 'taken@example.com']);
+    $user = User::factory()->create(['email' => 'user@example.com']);
+
+    $response = $this
+        ->actingAs($user)
+        ->patch('/profile', [
+            'name' => 'Test User',
+            'email' => 'taken@example.com',
+        ]);
+
+    $response->assertSessionHasErrors('email');
+});
+
+test('role=admin does not change role', function () {
+    $user = User::factory()->create(['role' => UserRole::Affiliate]);
+
+    $this
+        ->actingAs($user)
+        ->patch('/profile', [
+            'name' => 'Test User',
+            'email' => 'user@example.com',
+            'role' => 'admin',
+        ]);
+
+    $user->refresh();
+    $this->assertEquals(UserRole::Affiliate, $user->role);
 });
 
 test('user can delete their account', function () {
