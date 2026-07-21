@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\OfferController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,5 +25,11 @@ Route::prefix('v1')->group(function () {
 
         Route::patch('/profile', [ProfileController::class, 'update'])
             ->name('api.v1.profile.update');
+
+        Route::get('/offers', [OfferController::class, 'index'])
+            ->name('api.v1.offers.index');
+
+        Route::post('/offers', [OfferController::class, 'store'])
+            ->name('api.v1.offers.store');
     });
 });

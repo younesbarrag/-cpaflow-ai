@@ -163,21 +163,27 @@ created_at         TIMESTAMP
 updated_at         TIMESTAMP
 ```
 
-### Table `offers` — Planifié
-
-> Planifié — à confirmer dans l'OpenSpec de la User Story concernée.
+### Table `offers` — Implémenté
 
 ```
 id                 BIGINT          PK       auto_increment
-user_id            BIGINT          FK -> users.id
+user_id            BIGINT          FK -> users.id  ON DELETE CASCADE
 name               VARCHAR(255)
-destination_url    TEXT
-payout             DECIMAL(10,2)
-status             VARCHAR(20)     DEFAULT 'draft'  INDEX
+destination_url    VARCHAR(2048)
+payout             DECIMAL(12,2)   DEFAULT 0.00
+status             VARCHAR(20)     DEFAULT 'draft'
 description        TEXT            NULLABLE
 created_at         TIMESTAMP
 updated_at         TIMESTAMP
+
+INDEX idx_offers_user_status (user_id, status)
 ```
+
+- **Statut :** Implémenté (KAN-11)
+- **Clé étrangère :** `user_id` → `users.id` avec suppression en cascade
+- **Index composite :** `(user_id, status)` pour les requêtes de listing et filtrage futur
+- **Payout :** `DECIMAL(12,2)` — capacité maximale 9 999 999 999,99
+- **Destination URL :** `VARCHAR(2048)` — supporte les URLs longues avec paramètres de requête
 
 ### Table `campaigns` — Planifié
 
@@ -398,7 +404,7 @@ failed_at          TIMESTAMP       DEFAULT CURRENT_TIMESTAMP
 - **Fichier :** `app/Enums/UserRole.php`
 - **Statut :** Implémenté et utilisé (cast sur `User.role`)
 
-### `OfferStatus` — Créé, pas encore utilisé
+### `OfferStatus` — Implémenté
 
 | Valeur | Description |
 |--------|-------------|
@@ -408,7 +414,7 @@ failed_at          TIMESTAMP       DEFAULT CURRENT_TIMESTAMP
 | `archived` | Archivée |
 
 - **Fichier :** `app/Enums/OfferStatus.php`
-- **Statut :** Créé (KAN-8) mais pas encore lié à une migration ou un modèle
+- **Statut :** Implémenté et utilisé (cast sur `Offer.status`)
 
 ### `CampaignStatus` — Créé, pas encore utilisé
 
@@ -539,6 +545,9 @@ flowchart TB
   - `POST /api/v1/auth/login` — public, rate limiting dans l'Action
   - `POST /api/v1/auth/logout` — authentifié
   - `GET /api/v1/auth/user` — authentifié
+  - `PATCH /api/v1/profile` — authentifié
+  - `GET /api/v1/offers` — authentifié, liste paginée des offres
+  - `POST /api/v1/offers` — authentifié, création d'offre
 
 ### Couche métier
 
@@ -671,7 +680,7 @@ flowchart LR
 | Rôle Affiliate/Admin | Enum `UserRole`, colonne `role` (VARCHAR(20), default `affiliate`, indexée) |
 | Authentification API token | Sanctum `auth:sanctum`, `HasApiTokens` sur User |
 | Rate limiting inscription API | Limiter `api-register` : 10/min par IP |
-| Rate limiting connexion API | Lifecycle explicite dans `AuthenticateApiUserAction` : 5/min par email|IP |
+| Rate limiting connexion API | Lifecycle explicite dans `AuthenticateApiUserAction` : 5/min par email\|IP |
 | Form Requests API | `RegisterApiRequest`, `LoginApiRequest` |
 | API Resource utilisateur | `UserResource` : id, name, email, role |
 | DTO Login | `LoginResult` : success/failed/throttled |
@@ -679,15 +688,20 @@ flowchart LR
 | Pest | Configuré, `RefreshDatabase` sur Feature tests |
 | Laravel Pint | Conforme |
 | Build frontend | `npm run build` via Vite + Tailwind CSS |
-| Tests | 57/57 tests passent |
+| Tests | 134/134 tests passent |
+| Profil API update | `PATCH /api/v1/profile` — mise à jour du profil utilisateur |
+| Middleware admin | `EnsureUserIsAdmin` — protection des routes admin |
+| Offres (create + list) | Table `offers`, modèle `Offer`, `POST /api/v1/offers`, `GET /api/v1/offers` |
+| CreateOfferAction | Logique métier centralisée pour la création d'offres |
+| StoreOfferRequest | Validation de la création d'offres avec `url:http,https` et `decimal:0,2` |
+| OfferResource | Structure JSON pour les offres |
+| OfferFactory | Génération de données de test pour les offres |
 
 ### Planifié
 
 | Fonctionnalité | Statut |
 |----------------|--------|
-| Profil API update | Pas encore d'endpoint API pour mettre à jour le profil |
-| Middleware admin | Pas de middleware `admin` pour les routes protégées |
-| Offres (CRUD) | Table `offers` planifiée, pas de migration |
+| Offres (update, archive, delete) | KAN-12 — CRUD complet des offres |
 | Campagnes (CRUD) | Table `campaigns` planifiée, pas de migration |
 | Tracking (génération + clics) | Tables `tracking_links` et `clicks` planifiées |
 | Conversions (postback) | Table `conversions` planifiée |
