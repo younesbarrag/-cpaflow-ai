@@ -139,7 +139,7 @@ erDiagram
 | # | Règle | Statut |
 |---|-------|--------|
 | R1 | Les données sont isolées par utilisateur authentifié — un Affiliate ne voit que ses propres offres, campagnes et statistiques. | Implémenté (Auth + API) |
-| R2 | Une offre archivée ne peut pas être utilisée pour une nouvelle campagne. | À confirmer dans l'OpenSpec de la User Story concernée |
+| R2 | Une offre archivée ne peut pas être utilisée pour une nouvelle campagne. | Stratégie confirmée (KAN-12) — offres archivées avec statut `archived` |
 | R3 | Une campagne suspendue ne peut pas générer un lien de tracking actif. | À confirmer dans l'OpenSpec de la User Story concernée |
 | R4 | Le champ `external_id` sur les conversions empêche les doublons lors des postbacks. | Planifié |
 | R5 | Seules les conversions approuvées (`approved`) comptent dans le revenu. | Planifié |
@@ -179,9 +179,9 @@ updated_at         TIMESTAMP
 INDEX idx_offers_user_status (user_id, status)
 ```
 
-- **Statut :** Implémenté (KAN-11)
+- **Statut :** Implémenté (KAN-11) — Filtrage et archivage par statut implémentés (KAN-12)
 - **Clé étrangère :** `user_id` → `users.id` avec suppression en cascade
-- **Index composite :** `(user_id, status)` pour les requêtes de listing et filtrage futur
+- **Index composite :** `(user_id, status)` — utilisé pour le filtrage par statut (KAN-12)
 - **Payout :** `DECIMAL(12,2)` — capacité maximale 9 999 999 999,99
 - **Destination URL :** `VARCHAR(2048)` — supporte les URLs longues avec paramètres de requête
 
@@ -546,8 +546,10 @@ flowchart TB
   - `POST /api/v1/auth/logout` — authentifié
   - `GET /api/v1/auth/user` — authentifié
   - `PATCH /api/v1/profile` — authentifié
-  - `GET /api/v1/offers` — authentifié, liste paginée des offres
+  - `GET /api/v1/offers` — authentifié, liste paginée des offres (filtrage par statut, recherche par nom)
   - `POST /api/v1/offers` — authentifié, création d'offre
+  - `PATCH /api/v1/offers/{offer}` — authentifié, mise à jour partielle d'offre (propriétaire uniquement)
+  - `POST /api/v1/offers/{offer}/archive` — authentifié, archivage d'offre (propriétaire uniquement)
 
 ### Couche métier
 
@@ -688,12 +690,19 @@ flowchart LR
 | Pest | Configuré, `RefreshDatabase` sur Feature tests |
 | Laravel Pint | Conforme |
 | Build frontend | `npm run build` via Vite + Tailwind CSS |
-| Tests | 134/134 tests passent |
+| Tests | 156/156 tests passent |
 | Profil API update | `PATCH /api/v1/profile` — mise à jour du profil utilisateur |
 | Middleware admin | `EnsureUserIsAdmin` — protection des routes admin |
 | Offres (create + list) | Table `offers`, modèle `Offer`, `POST /api/v1/offers`, `GET /api/v1/offers` |
+| Offres (update + archive) | `PATCH /api/v1/offers/{offer}`, `POST /api/v1/offers/{offer}/archive` — KAN-12 |
+| Offres (filtrage + recherche) | `GET /api/v1/offers?status=&search=` — scopes `scopeStatus`, `scopeSearch` |
+| OfferPolicy | Autorisation par ownership — `update()`, `archive()` |
 | CreateOfferAction | Logique métier centralisée pour la création d'offres |
+| UpdateOfferAction | Logique métier centralisée pour la mise à jour d'offres |
+| ArchiveOfferAction | Logique métier centralisée pour l'archivage d'offres |
 | StoreOfferRequest | Validation de la création d'offres avec `url:http,https` et `decimal:0,2` |
+| UpdateOfferRequest | Validation partielle avec `sometimes`, normalisation, vérification d'ownership |
+| IndexOfferRequest | Validation du filtrage par statut et recherche par nom |
 | OfferResource | Structure JSON pour les offres |
 | OfferFactory | Génération de données de test pour les offres |
 
@@ -701,7 +710,7 @@ flowchart LR
 
 | Fonctionnalité | Statut |
 |----------------|--------|
-| Offres (update, archive, delete) | KAN-12 — CRUD complet des offres |
+| Offres (delete physique) | Pas encore défini |
 | Campagnes (CRUD) | Table `campaigns` planifiée, pas de migration |
 | Tracking (génération + clics) | Tables `tracking_links` et `clicks` planifiées |
 | Conversions (postback) | Table `conversions` planifiée |
@@ -719,8 +728,8 @@ flowchart LR
 
 | # | Décision | User Story concernée |
 |---|----------|----------------------|
-| 1 | Colonnes définitives de la table `offers` (champs optionnels, contraintes) | Offres |
-| 2 | Stratégie d'archivage des offres (soft delete vs. statut `archived`) | Offres |
+| 1 | Colonnes définitives de la table `offers` (champs optionnels, contraintes) | Confirmé (KAN-11 + KAN-12) |
+| 2 | Stratégie d'archivage des offres (soft delete vs. statut `archived`) | Confirmé (KAN-12) — statut `archived`, pas de SoftDeletes |
 | 3 | Contraintes de suppression (que se passe-t-il quand on supprime une offre avec des campagnes ?) | Offres |
 | 4 | Précision monétaire exacte (DECIMAL(10,2) vs. DECIMAL(12,4) pour les montants) | Offres, Campagnes, Conversions |
 | 5 | Relation exacte entre conversions et clics (liées par `tracking_link_id` ? par `external_id` ?) | Conversions |

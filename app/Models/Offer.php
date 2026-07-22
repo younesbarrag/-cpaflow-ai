@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\OfferStatus;
 use Database\Factories\OfferFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,36 @@ class Offer extends Model
             'payout' => 'decimal:2',
             'status' => OfferStatus::class,
         ];
+    }
+
+    /**
+     * @param  Builder<Offer>  $query
+     * @return Builder<Offer>
+     */
+    public function scopeStatus(
+        Builder $query,
+        ?OfferStatus $status,
+    ): Builder {
+        if ($status === null) {
+            return $query;
+        }
+
+        return $query->where('status', $status->value);
+    }
+
+    /**
+     * @param  Builder<Offer>  $query
+     * @return Builder<Offer>
+     */
+    public function scopeSearch(
+        Builder $query,
+        ?string $search,
+    ): Builder {
+        if ($search === null || $search === '') {
+            return $query;
+        }
+
+        return $query->where('name', 'like', '%'.$search.'%');
     }
 
     public function user(): BelongsTo
