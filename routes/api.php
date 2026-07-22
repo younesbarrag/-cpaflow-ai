@@ -31,5 +31,11 @@ Route::prefix('v1')->group(function () {
 
         Route::post('/offers', [OfferController::class, 'store'])
             ->name('api.v1.offers.store');
+        Route::patch('/offers/{offer}', [OfferController::class, 'update'])
+            ->name('api.v1.offers.update');
+
+        Route::post('/offers/{offer}/archive', [OfferController::class, 'archive'])
+            ->name('api.v1.offers.archive');
     });
+
 });
