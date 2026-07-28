@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CampaignController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\OfferController;
 use App\Http\Controllers\Api\V1\ProfileController;
@@ -36,6 +37,25 @@ Route::prefix('v1')->group(function () {
 
         Route::post('/offers/{offer}/archive', [OfferController::class, 'archive'])
             ->name('api.v1.offers.archive');
+
+        Route::get('/campaigns', [CampaignController::class, 'index'])
+            ->name('api.v1.campaigns.index');
+
+        Route::post('/campaigns', [CampaignController::class, 'store'])
+            ->name('api.v1.campaigns.store');
+
+        Route::get('/campaigns/{campaign}', [CampaignController::class, 'show'])
+            ->name('api.v1.campaigns.show');
+
+        Route::patch('/campaigns/{campaign}', [CampaignController::class, 'update'])
+            ->name('api.v1.campaigns.update');
+
+        Route::post('/campaigns/{campaign}/activate', [CampaignController::class, 'activate'])
+            ->name('api.v1.campaigns.activate');
+
+        Route::post('/campaigns/{campaign}/suspend', [CampaignController::class, 'suspend'])
+            ->name('api.v1.campaigns.suspend');
+
     });
 
 });

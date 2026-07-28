@@ -185,20 +185,26 @@ INDEX idx_offers_user_status (user_id, status)
 - **Payout :** `DECIMAL(12,2)` — capacité maximale 9 999 999 999,99
 - **Destination URL :** `VARCHAR(2048)` — supporte les URLs longues avec paramètres de requête
 
-### Table `campaigns` — Planifié
+### Table `campaigns` — Implémenté
 
-> Planifié — à confirmer dans l'OpenSpec de la User Story concernée.
+> Implémenté (KAN-13) — Migration `2026_07_23_140250_create_campaigns_table`.
 
 ```
-id                 BIGINT          PK       auto_increment
-offer_id           BIGINT          FK -> offers.id
+id                 BIGINT UNSIGNED PK       auto_increment
+offer_id           BIGINT UNSIGNED FK -> offers.id  ON DELETE CASCADE
 name               VARCHAR(255)
-traffic_source     VARCHAR(255)    NULLABLE
-budget             DECIMAL(10,2)   NULLABLE
-status             VARCHAR(20)     DEFAULT 'draft'  INDEX
+traffic_source     VARCHAR(255)
+budget             DECIMAL(12,2)
+status             VARCHAR(20)     DEFAULT 'draft'
 created_at         TIMESTAMP
 updated_at         TIMESTAMP
 ```
+
+- **Clé étrangère :** `offer_id` → `offers.id` avec suppression en cascade
+- **Pas de user_id :** L'ownership est dérivée de `Campaign → Offer → User`
+- **Budget :** `DECIMAL(12,2)` — capacité maximale 9 999 999 999,99
+- **Statuts :** `draft`, `active`, `suspended` — lifecycle stricte
+- **Pas de suppression ni d'archivage** de campagne dans KAN-13
 
 ### Table `tracking_links` — Planifié
 
@@ -416,16 +422,18 @@ failed_at          TIMESTAMP       DEFAULT CURRENT_TIMESTAMP
 - **Fichier :** `app/Enums/OfferStatus.php`
 - **Statut :** Implémenté et utilisé (cast sur `Offer.status`)
 
-### `CampaignStatus` — Créé, pas encore utilisé
+### `CampaignStatus` — Implémenté
 
 | Valeur | Description |
 |--------|-------------|
-| `draft` | Brouillon |
-| `active` | Active |
-| `suspended` | Suspendue |
+| `draft` | Brouillon — statut initial à la création |
+| `active` | Active — après activation |
+| `suspended` | Suspendue — après suspension |
 
 - **Fichier :** `app/Enums/CampaignStatus.php`
-- **Statut :** Créé (KAN-8) mais pas encore lié à une migration ou un modèle
+- **Statut :** Implémenté et utilisé (cast sur `Campaign.status`, KAN-13)
+- **Lifecycle :** `draft → active`, `active → suspended`, `suspended → active`
+- **Transitions invalides :** retour `409 Conflict`, pas d'écriture en base
 
 ### `ConversionStatus` — Créé, pas encore utilisé
 
@@ -550,6 +558,12 @@ flowchart TB
   - `POST /api/v1/offers` — authentifié, création d'offre
   - `PATCH /api/v1/offers/{offer}` — authentifié, mise à jour partielle d'offre (propriétaire uniquement)
   - `POST /api/v1/offers/{offer}/archive` — authentifié, archivage d'offre (propriétaire uniquement)
+  - `GET /api/v1/campaigns` — authentifié, liste paginée des campagnes (15 par page, isolation par ownership Offer)
+  - `POST /api/v1/campaigns` — authentifié, création de campagne (draft uniquement, offre non archivée requise)
+  - `GET /api/v1/campaigns/{campaign}` — authentifié, détail d'une campagne (propriétaire uniquement)
+  - `PATCH /api/v1/campaigns/{campaign}` — authentifié, mise à jour partielle (name, traffic_source, budget uniquement)
+  - `POST /api/v1/campaigns/{campaign}/activate` — authentifié, activation (draft/suspended → active)
+  - `POST /api/v1/campaigns/{campaign}/suspend` — authentifié, suspension (active → suspended)
 
 ### Couche métier
 
@@ -690,7 +704,7 @@ flowchart LR
 | Pest | Configuré, `RefreshDatabase` sur Feature tests |
 | Laravel Pint | Conforme |
 | Build frontend | `npm run build` via Vite + Tailwind CSS |
-| Tests | 156/156 tests passent |
+| Tests | 190/190 tests passent |
 | Profil API update | `PATCH /api/v1/profile` — mise à jour du profil utilisateur |
 | Middleware admin | `EnsureUserIsAdmin` — protection des routes admin |
 | Offres (create + list) | Table `offers`, modèle `Offer`, `POST /api/v1/offers`, `GET /api/v1/offers` |
@@ -705,13 +719,25 @@ flowchart LR
 | IndexOfferRequest | Validation du filtrage par statut et recherche par nom |
 | OfferResource | Structure JSON pour les offres |
 | OfferFactory | Génération de données de test pour les offres |
+| Campagnes (CRUD + lifecycle) | Table `campaigns`, modèle `Campaign`, 6 routes API — KAN-13 |
+| CampaignStatus lifecycle | `draft → active → suspended → active`, transitions strictes, `409` sur invalides |
+| CampaignPolicy | Autorisation par ownership dérivée (`Campaign → Offer → User`) |
+| CreateCampaignAction | Création draft systématique via relation Offer |
+| UpdateCampaignAction | Mise à jour partielle (name, traffic_source, budget) |
+| ActivateCampaignAction | Activation draft/suspended → active |
+| SuspendCampaignAction | Suspension active → suspended |
+| InvalidCampaignTransition | Exception domain → 409 JSON |
+| StoreCampaignRequest | Validation création avec résolution Offer, archived Offer 422, status prohibited |
+| UpdateCampaignRequest | PATCH partiel, prohibited fields (offer_id, user_id, status) |
+| CampaignResource | JSON : id, offer {id, name}, name, traffic_source, budget, status, timestamps |
+| CampaignFactory | Offres par défaut, states active/suspended, budget DECIMAL(12,2) |
 
 ### Planifié
 
 | Fonctionnalité | Statut |
 |----------------|--------|
 | Offres (delete physique) | Pas encore défini |
-| Campagnes (CRUD) | Table `campaigns` planifiée, pas de migration |
+| Campagnes (CRUD) | Implémenté (KAN-13) — CRUD + lifecycle sans delete/archive |
 | Tracking (génération + clics) | Tables `tracking_links` et `clicks` planifiées |
 | Conversions (postback) | Table `conversions` planifiée |
 | Dépenses campagne | Table `campaign_expenses` planifiée |
