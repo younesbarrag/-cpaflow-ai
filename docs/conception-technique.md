@@ -86,7 +86,6 @@ erDiagram
 
     LIEN_TRACKING {
         string code
-        boolean actif
     }
 
     CLIC {
@@ -96,7 +95,9 @@ erDiagram
         string utm_source
         string utm_medium
         string utm_campaign
-        datetime date_clic
+        string utm_term
+        string utm_content
+        datetime created_at
     }
 
     CONVERSION {
@@ -206,36 +207,48 @@ updated_at         TIMESTAMP
 - **Statuts :** `draft`, `active`, `suspended` — lifecycle stricte
 - **Pas de suppression ni d'archivage** de campagne dans KAN-13
 
-### Table `tracking_links` — Planifié
+### Table `tracking_links` — Implémenté (KAN-14)
 
-> Planifié — à confirmer dans l'OpenSpec de la User Story concernée.
+> Implémenté (KAN-14) — Migration `2026_07_29_105824_create_tracking_links_table`.
 
 ```
-id                 BIGINT          PK       auto_increment
-campaign_id        BIGINT          FK -> campaigns.id
+id                 BIGINT UNSIGNED PK       auto_increment
+campaign_id        BIGINT UNSIGNED FK -> campaigns.id  ON DELETE CASCADE
 code               VARCHAR(32)     UNIQUE
-is_active          BOOLEAN         DEFAULT true
 created_at         TIMESTAMP
 updated_at         TIMESTAMP
 ```
 
-### Table `clicks` — Planifié
+- **Clé étrangère :** `campaign_id` → `campaigns.id` avec suppression en cascade
+- **Pas de user_id :** L'ownership est dérivée de `TrackingLink → Campaign → Offer → User`
+- **Code :** `VARCHAR(32)` — caractère alphanumérique unique, généré par `Str::random(32)`
+- **Pas de `is_active` :** Le statut est déterminé par le Campaign parent
 
-> Planifié — à confirmer dans l'OpenSpec de la User Story concernée.
+### Table `tracking_clicks` — Implémenté (KAN-15)
+
+> Implémenté (KAN-15) — Migration `2026_07_31_000000_create_tracking_clicks_table`.
 
 ```
-id                 BIGINT          PK       auto_increment
-tracking_link_id   BIGINT          FK -> tracking_links.id
-ip_hash            VARCHAR(64)
-user_agent         TEXT            NULLABLE
-referer            TEXT            NULLABLE
+id                 BIGINT UNSIGNED PK       auto_increment
+tracking_link_id   BIGINT UNSIGNED FK -> tracking_links.id  ON DELETE CASCADE
+ip_hash            VARCHAR(64)     NULLABLE
+user_agent         VARCHAR(512)    NULLABLE
+referer            VARCHAR(2048)   NULLABLE
 utm_source         VARCHAR(255)    NULLABLE
 utm_medium         VARCHAR(255)    NULLABLE
 utm_campaign       VARCHAR(255)    NULLABLE
-clicked_at         TIMESTAMP
+utm_term           VARCHAR(255)    NULLABLE
+utm_content        VARCHAR(255)    NULLABLE
 created_at         TIMESTAMP
 updated_at         TIMESTAMP
 ```
+
+- **Clé étrangère :** `tracking_link_id` → `tracking_links.id` avec suppression en cascade
+- **Pas de user_id, offer_id, campaign_id :** L'ownership et la destination sont dérivées de `TrackingClick → TrackingLink → Campaign → Offer`
+- **Pas de `clicked_at` :** `created_at` est l'horodatage autoritaire du clic
+- **Pas de stockage d'IP brute :** Seul le hash HMAC-SHA256 est enregistré
+- **Privacy IP :** Clé dérivée séparée par purpose (`tracking-ip-hash:v1` + `APP_KEY`), normalisation IPv4/IPv6 via `inet_pton`/`inet_ntop`
+- **Métadonnées :** User-Agent (512), Referer (2048), chaque champ UTM (255) — trim, empty→null, tronquature `mb_substr`
 
 ### Table `conversions` — Planifié
 
@@ -564,6 +577,7 @@ flowchart TB
   - `PATCH /api/v1/campaigns/{campaign}` — authentifié, mise à jour partielle (name, traffic_source, budget uniquement)
   - `POST /api/v1/campaigns/{campaign}/activate` — authentifié, activation (draft/suspended → active)
   - `POST /api/v1/campaigns/{campaign}/suspend` — authentifié, suspension (active → suspended)
+  - `POST /api/v1/campaigns/{campaign}/tracking-links` — authentifié, génération de lien de tracking (KAN-14)
 
 ### Couche métier
 
@@ -575,16 +589,27 @@ flowchart TB
 - **Enums :** Prévention des valeurs de statut invalides
 - **Modèles Eloquent :** ORM avec casts typés
 
-### Tracking public
+### Tracking public — Implémenté (KAN-15)
 
-> Planifié — à confirmer dans l'OpenSpec de la User Story concernée.
+> Implémenté (KAN-15) — Route `GET /t/{code}` dans `routes/web.php`.
 
-- **Route :** `GET /t/{code}` — public, pas d'authentification
+- **Route :** `GET /t/{code}` — nom `tracking.redirect`, pas d'authentification, pas de middleware `auth:sanctum`
+- **Controller :** `RedirectTrackingLinkController` (invokable, single-action)
+- **Action :** `RecordTrackingClickAction` — enregistre le clic via `$trackingLink->clicks()->create()`
+- **Service :** `IpHasher` — hash HMAC-SHA256 avec clé séparée par purpose
 - **Logique :**
-  1. Chercher le lien de tracking par `code`
-  2. Vérifier `is_active`
-  3. Enregistrer le clic (ip_hash, user_agent, referer, UTM)
-  4. Rediriger vers `destination_url` de l'offre
+  1. Chercher le lien de tracking par `code` avec eager-loading `campaign.offer`
+  2. Vérifier que `Campaign` et `Offer` existent
+  3. Vérifier que `Campaign.status === Active`
+  4. Vérifier la sécurité de l'URL de destination (`filter_var(FILTER_VALIDATE_URL)` + scheme http/https + host non vide)
+  5. Enregistrer le clic dans un try-catch (échec = `report()` + redirect quand même)
+  6. Rediriger 302 vers `Offer.destination_url`
+- **Scénarios :**
+  - Code inconnu → 404
+  - Campagne draft → 404
+  - Campagne suspendue → 404
+  - URL de destination non sécurisée → 404
+  - Campagne active + destination sûre → 302
 
 ### Traitement IA asynchrone
 
@@ -731,6 +756,13 @@ flowchart LR
 | UpdateCampaignRequest | PATCH partiel, prohibited fields (offer_id, user_id, status) |
 | CampaignResource | JSON : id, offer {id, name}, name, traffic_source, budget, status, timestamps |
 | CampaignFactory | Offres par défaut, states active/suspended, budget DECIMAL(12,2) |
+| TrackingLink (génération) | Table `tracking_links`, modèle `TrackingLink`, `POST /api/v1/campaigns/{id}/tracking-links` — KAN-14 |
+| GenerateTrackingLinkAction | Génération de code unique 32 caractères alphanumériques |
+| TrackingLinkPolicy | Autorisation par ownership dérivée (`TrackingLink → Campaign → Offer → User`) |
+| TrackingClick (clic + redirect) | Table `tracking_clicks`, modèle `TrackingClick`, `GET /t/{code}` — KAN-15 |
+| RecordTrackingClickAction | Enregistrement du clic avec hash IP, métadonnées tronquées |
+| IpHasher | HMAC-SHA256, clé séparée par purpose, normalisation IPv4/IPv6 |
+| RedirectTrackingLinkController | Route publique 302, try-catch sur persistance, vérification URL sûre |
 
 ### Planifié
 
@@ -738,7 +770,8 @@ flowchart LR
 |----------------|--------|
 | Offres (delete physique) | Pas encore défini |
 | Campagnes (CRUD) | Implémenté (KAN-13) — CRUD + lifecycle sans delete/archive |
-| Tracking (génération + clics) | Tables `tracking_links` et `clicks` planifiées |
+| TrackingLink (génération) | Implémenté (KAN-14) — `POST /api/v1/campaigns/{id}/tracking-links` |
+| TrackingClick (clic + redirect) | Implémenté (KAN-15) — `GET /t/{code}` — 302, enregistrement clic, privacy IP |
 | Conversions (postback) | Table `conversions` planifiée |
 | Dépenses campagne | Table `campaign_expenses` planifiée |
 | Dashboard statistiques | Pas encore de route ni de vue |

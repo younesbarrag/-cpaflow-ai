@@ -1,0 +1,616 @@
+{
+	"info": {
+		"_postman_id": "cpaflow-ai-kan15-collection",
+		"name": "CPAFlow AI — KAN-15 Record Tracking Click and Redirect",
+		"description": "End-to-end Postman verification for KAN-15: Record tracking click and redirect.\n\nTests the public redirect route GET /t/{code} with 302 redirect, click persistence, UTM passthrough, IP privacy, and URL safety.\nUses real HTTP requests against the local CPAFlow API.\nRun with: npx newman run <collection> -e <env> --ignore-redirects",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [],
+	"item": [
+		{
+			"name": "00 — Setup",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Owner Credentials",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var ts = Date.now();",
+									"var email = 'kan15-owner-' + ts + '@example.com';",
+									"var password = 'PostmanPass123!';",
+									"pm.environment.set('kan15_owner_email', email);",
+									"pm.environment.set('kan15_owner_password', password);",
+									"console.log('KAN-15 Owner email: ' + email);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Owner",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"KAN-15 Postman Test Owner\",\n  \"email\": \"{{kan15_owner_email}}\",\n  \"password\": \"{{kan15_owner_password}}\",\n  \"password_confirmation\": \"{{kan15_owner_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Owner",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"pm.test('response has token', function () { pm.expect(pm.response.json()).to.have.property('token'); });",
+									"",
+									"var body = pm.response.json();",
+									"if (body.token) {",
+									"    pm.environment.set('kan15_owner_token', body.token);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{kan15_owner_email}}\",\n  \"password\": \"{{kan15_owner_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Offer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"",
+									"var body = pm.response.json();",
+									"if (body.data && body.data.offer) {",
+									"    pm.environment.set('kan15_offer_id', String(body.data.offer.id));",
+									"    pm.environment.set('kan15_offer_destination_url', body.data.offer.destination_url);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan15_owner_token}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"KAN-15 Postman Test Offer\",\n  \"destination_url\": \"https://example.com/kan15-offer\",\n  \"payout\": 5.00,\n  \"status\": \"active\",\n  \"description\": \"KAN-15 Postman Test Offer Description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/offers",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "offers"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Active Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"",
+									"var body = pm.response.json();",
+									"if (body.data && body.data.campaign) {",
+									"    pm.environment.set('kan15_active_campaign_id', String(body.data.campaign.id));",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan15_owner_token}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"offer_id\": {{kan15_offer_id}},\n  \"name\": \"KAN-15 Postman Test Active Campaign\",\n  \"traffic_source\": \"Facebook\",\n  \"budget\": 100.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Activate Active Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan15_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{kan15_active_campaign_id}}/activate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{kan15_active_campaign_id}}", "activate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Draft Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"",
+									"var body = pm.response.json();",
+									"if (body.data && body.data.campaign) {",
+									"    pm.environment.set('kan15_draft_campaign_id', String(body.data.campaign.id));",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan15_owner_token}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"offer_id\": {{kan15_offer_id}},\n  \"name\": \"KAN-15 Postman Test Draft Campaign\",\n  \"traffic_source\": \"Google\",\n  \"budget\": 50.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Suspended Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"",
+									"var body = pm.response.json();",
+									"if (body.data && body.data.campaign) {",
+									"    pm.environment.set('kan15_suspended_campaign_id', String(body.data.campaign.id));",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan15_owner_token}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"offer_id\": {{kan15_offer_id}},\n  \"name\": \"KAN-15 Postman Test Suspended Campaign\",\n  \"traffic_source\": \"Twitter\",\n  \"budget\": 200.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Activate Suspended Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan15_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{kan15_suspended_campaign_id}}/activate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{kan15_suspended_campaign_id}}", "activate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Tracking Link for Suspended Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"",
+									"var body = pm.response.json();",
+									"var tl = body.data.tracking_link;",
+									"if (tl) {",
+									"    pm.environment.set('kan15_suspended_tracking_code', tl.code);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan15_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{kan15_suspended_campaign_id}}/tracking-links",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{kan15_suspended_campaign_id}}", "tracking-links"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Suspend Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan15_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{kan15_suspended_campaign_id}}/suspend",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{kan15_suspended_campaign_id}}", "suspend"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Tracking Link for Active Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"pm.test('response has data.tracking_link', function () { pm.expect(pm.response.json().data).to.have.property('tracking_link'); });",
+									"",
+									"var body = pm.response.json();",
+									"var tl = body.data.tracking_link;",
+									"if (tl) {",
+									"    pm.environment.set('kan15_active_tracking_code', tl.code);",
+									"    pm.environment.set('kan15_active_tracking_url', tl.url);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan15_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{kan15_active_campaign_id}}/tracking-links",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{kan15_active_campaign_id}}", "tracking-links"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Draft Campaign — Tracking Link Generation Rejected",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 422', function () { pm.response.to.have.status(422); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan15_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{kan15_draft_campaign_id}}/tracking-links",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{kan15_draft_campaign_id}}", "tracking-links"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "01 — Redirect (Active Campaign)",
+			"item": [
+				{
+					"name": "Active Campaign — 302 Redirect to destination_url",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 302', function () { pm.response.to.have.status(302); });",
+									"pm.test('Location header equals destination_url', function () {",
+									"    pm.response.to.have.header('Location');",
+									"    var location = pm.response.headers.get('Location');",
+									"    pm.expect(location).to.eql(pm.environment.get('kan15_offer_destination_url'));",
+									"});",
+									"pm.test('no authentication required', function () {",
+									"    pm.response.to.not.have.header('Authorization');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "text/html" }
+						],
+						"url": {
+							"raw": "{{base_url}}/t/{{kan15_active_tracking_code}}",
+							"host": ["{{base_url}}"],
+							"path": ["t", "{{kan15_active_tracking_code}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "02 — Redirect with UTM Parameters",
+			"item": [
+				{
+					"name": "Active Campaign with UTM params — 302 Redirect",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 302', function () { pm.response.to.have.status(302); });",
+									"pm.test('Location header equals destination_url', function () {",
+									"    var location = pm.response.headers.get('Location');",
+									"    pm.expect(location).to.eql(pm.environment.get('kan15_offer_destination_url'));",
+									"});",
+									"pm.test('no authentication required', function () {",
+									"    pm.response.to.not.have.header('Authorization');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "text/html" }
+						],
+						"url": {
+							"raw": "{{base_url}}/t/{{kan15_active_tracking_code}}?utm_source=facebook&utm_medium=cpc&utm_campaign=kan15_test&utm_term=keyword&utm_content=banner",
+							"host": ["{{base_url}}"],
+							"path": ["t", "{{kan15_active_tracking_code}}"],
+							"query": [
+								{ "key": "utm_source", "value": "facebook" },
+								{ "key": "utm_medium", "value": "cpc" },
+								{ "key": "utm_campaign", "value": "kan15_test" },
+								{ "key": "utm_term", "value": "keyword" },
+								{ "key": "utm_content", "value": "banner" }
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "03 — Redirect Failure Cases",
+			"item": [
+				{
+					"name": "Unknown Code — 404",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 404', function () { pm.response.to.have.status(404); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "text/html" }
+						],
+						"url": {
+							"raw": "{{base_url}}/t/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+							"host": ["{{base_url}}"],
+							"path": ["t", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Suspended Campaign Link — 404",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('kan15_suspended_tracking_code')) {",
+									"    pm.test('status is 404', function () { pm.response.to.have.status(404); });",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "text/html" }
+						],
+						"url": {
+							"raw": "{{base_url}}/t/{{kan15_suspended_tracking_code}}",
+							"host": ["{{base_url}}"],
+							"path": ["t", "{{kan15_suspended_tracking_code}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "noauth"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": []
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": []
+			}
+		}
+	]
+}
