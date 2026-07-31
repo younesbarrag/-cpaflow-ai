@@ -1,7 +1,11 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RedirectTrackingLinkController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/t/{code}', RedirectTrackingLinkController::class)
+    ->name('tracking.redirect');
 
 Route::get('/', function () {
     return view('welcome');
