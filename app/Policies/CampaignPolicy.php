@@ -31,4 +31,9 @@ final class CampaignPolicy
     {
         return $user->id === $campaign->offer->user_id;
     }
+
+    public function generateTrackingLink(User $user, Campaign $campaign): bool
+    {
+        return $this->ownsCampaign($user, $campaign);
+    }
 }

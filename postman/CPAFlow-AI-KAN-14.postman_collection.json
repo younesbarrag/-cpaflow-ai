@@ -1,0 +1,882 @@
+{
+	"info": {
+		"_postman_id": "cpaflow-ai-kan14-collection",
+		"name": "CPAFlow AI — KAN-14 Generate Tracking Link",
+		"description": "End-to-end Postman verification for KAN-14: Generate a tracking link for a Campaign.\n\nUses real HTTP requests against the local CPAFlow API.\nAuthentication: Laravel Sanctum Bearer tokens.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [],
+	"item": [
+		{
+			"name": "00 — Setup",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"pm.test('service is CPAFlow API', function () { pm.expect(pm.response.json().service).to.eql('CPAFlow API'); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						}
+					}
+				},
+				{
+					"name": "Generate Owner Credentials",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var ts = Date.now();",
+									"var email = 'kan14-owner-' + ts + '@example.com';",
+									"var password = 'PostmanPass123!';",
+									"pm.environment.set('owner_email', email);",
+									"pm.environment.set('owner_password', password);",
+									"console.log('Owner email: ' + email);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Owner",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"pm.test('response has data.user', function () { pm.expect(pm.response.json().data).to.have.property('user'); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"KAN-14 Postman Test Owner\",\n  \"email\": \"{{owner_email}}\",\n  \"password\": \"{{owner_password}}\",\n  \"password_confirmation\": \"{{owner_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Owner",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"pm.test('response has token', function () { pm.expect(pm.response.json()).to.have.property('token'); });",
+									"pm.test('response has token_type Bearer', function () { pm.expect(pm.response.json().token_type).to.eql('Bearer'); });",
+									"",
+									"var body = pm.response.json();",
+									"if (body.token) {",
+									"    pm.environment.set('owner_token', body.token);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{owner_email}}\",\n  \"password\": \"{{owner_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Foreign Credentials",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var ts = Date.now();",
+									"var email = 'kan14-foreign-' + ts + '@example.com';",
+									"var password = 'PostmanPass123!';",
+									"pm.environment.set('foreign_email', email);",
+									"pm.environment.set('foreign_password', password);",
+									"console.log('Foreign email: ' + email);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Foreign User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"KAN-14 Postman Test Foreign\",\n  \"email\": \"{{foreign_email}}\",\n  \"password\": \"{{foreign_password}}\",\n  \"password_confirmation\": \"{{foreign_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Foreign User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"pm.test('response has token', function () { pm.expect(pm.response.json()).to.have.property('token'); });",
+									"",
+									"var body = pm.response.json();",
+									"if (body.token) {",
+									"    pm.environment.set('foreign_token', body.token);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{foreign_email}}\",\n  \"password\": \"{{foreign_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Owner Offer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"pm.test('response has data.offer', function () { pm.expect(pm.response.json().data).to.have.property('offer'); });",
+									"",
+									"var body = pm.response.json();",
+									"if (body.data && body.data.offer) {",
+									"    pm.environment.set('offer_id', body.data.offer.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{owner_token}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"KAN-14 Postman Test Offer\",\n  \"destination_url\": \"https://example.com/kan14-offer\",\n  \"payout\": 5.00,\n  \"status\": \"active\",\n  \"description\": \"KAN-14 Postman Test Offer Description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/offers",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "offers"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Active Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"pm.test('response has data.campaign', function () { pm.expect(pm.response.json().data).to.have.property('campaign'); });",
+									"",
+									"var body = pm.response.json();",
+									"if (body.data && body.data.campaign) {",
+									"    pm.environment.set('active_campaign_id', String(body.data.campaign.id));",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{owner_token}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"offer_id\": {{offer_id}},\n  \"name\": \"KAN-14 Postman Test Active Campaign\",\n  \"traffic_source\": \"Facebook\",\n  \"budget\": 100.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Activate Active Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{active_campaign_id}}/activate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{active_campaign_id}}", "activate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Draft Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"",
+									"var body = pm.response.json();",
+									"if (body.data && body.data.campaign) {",
+									"    pm.environment.set('draft_campaign_id', String(body.data.campaign.id));",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{owner_token}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"offer_id\": {{offer_id}},\n  \"name\": \"KAN-14 Postman Test Draft Campaign\",\n  \"traffic_source\": \"Google\",\n  \"budget\": 50.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Suspended Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"",
+									"var body = pm.response.json();",
+									"if (body.data && body.data.campaign) {",
+									"    pm.environment.set('suspended_campaign_id', String(body.data.campaign.id));",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{owner_token}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"offer_id\": {{offer_id}},\n  \"name\": \"KAN-14 Postman Test Suspended Campaign\",\n  \"traffic_source\": \"Twitter\",\n  \"budget\": 200.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Activate Suspended Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{suspended_campaign_id}}/activate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{suspended_campaign_id}}", "activate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Suspend Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{suspended_campaign_id}}/suspend",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{suspended_campaign_id}}", "suspend"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Foreign Offer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"",
+									"var body = pm.response.json();",
+									"if (body.data && body.data.offer) {",
+									"    pm.environment.set('foreign_offer_id', body.data.offer.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{foreign_token}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"KAN-14 Postman Test Foreign Offer\",\n  \"destination_url\": \"https://example.com/kan14-foreign-offer\",\n  \"payout\": 3.00,\n  \"status\": \"active\",\n  \"description\": \"Foreign user offer\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/offers",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "offers"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Foreign Active Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"",
+									"var body = pm.response.json();",
+									"if (body.data && body.data.campaign) {",
+									"    pm.environment.set('foreign_active_campaign_id', String(body.data.campaign.id));",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{foreign_token}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"offer_id\": {{foreign_offer_id}},\n  \"name\": \"KAN-14 Postman Test Foreign Active Campaign\",\n  \"traffic_source\": \"LinkedIn\",\n  \"budget\": 75.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Activate Foreign Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{foreign_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{foreign_active_campaign_id}}/activate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{foreign_active_campaign_id}}", "activate"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "01 — Generate Tracking Link",
+			"item": [
+				{
+					"name": "Generate Tracking Link (Owner, Active Campaign)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"pm.test('response has data.tracking_link', function () { pm.expect(pm.response.json().data).to.have.property('tracking_link'); });",
+									"",
+									"var body = pm.response.json();",
+									"var tl = body.data.tracking_link;",
+									"",
+									"pm.test('tracking_link has exactly: id, campaign_id, code, url, created_at, updated_at', function () {",
+									"    pm.expect(Object.keys(tl)).to.eql(['id', 'campaign_id', 'code', 'url', 'created_at', 'updated_at']);",
+									"});",
+									"",
+									"pm.test('campaign_id matches active_campaign_id', function () {",
+									"    pm.expect(tl.campaign_id).to.eql(Number(pm.environment.get('active_campaign_id')));",
+									"});",
+									"",
+									"pm.test('code is a string', function () { pm.expect(tl.code).to.be.a('string'); });",
+									"pm.test('code is exactly 32 characters', function () { pm.expect(tl.code).to.have.length(32); });",
+									"pm.test('code matches /^[A-Za-z0-9]{32}$/', function () { pm.expect(tl.code).to.match(/^[A-Za-z0-9]{32}$/); });",
+									"",
+									"pm.test('url equals normalized base_url + /t/ + code', function () {",
+									"    var base = pm.environment.get('base_url').replace(/\\/$/, '');",
+									"    pm.expect(tl.url).to.eql(base + '/t/' + tl.code);",
+									"});",
+									"",
+									"pm.test('created_at exists', function () { pm.expect(tl.created_at).to.exist; });",
+									"pm.test('updated_at exists', function () { pm.expect(tl.updated_at).to.exist; });",
+									"",
+									"pm.test('response does not expose user_id', function () { pm.expect(tl).to.not.have.property('user_id'); });",
+									"pm.test('response does not expose offer_id', function () { pm.expect(tl).to.not.have.property('offer_id'); });",
+									"pm.test('response does not expose destination_url', function () { pm.expect(tl).to.not.have.property('destination_url'); });",
+									"pm.test('response does not expose is_active', function () { pm.expect(tl).to.not.have.property('is_active'); });",
+									"pm.test('response does not expose campaign', function () { pm.expect(tl).to.not.have.property('campaign'); });",
+									"pm.test('response does not expose offer', function () { pm.expect(tl).to.not.have.property('offer'); });",
+									"pm.test('response does not expose name', function () { pm.expect(tl).to.not.have.property('name'); });",
+									"pm.test('response does not expose budget', function () { pm.expect(tl).to.not.have.property('budget'); });",
+									"pm.test('response does not expose traffic_source', function () { pm.expect(tl).to.not.have.property('traffic_source'); });",
+									"",
+									"pm.environment.set('first_tracking_link_id', String(tl.id));",
+									"pm.environment.set('first_tracking_code', tl.code);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{active_campaign_id}}/tracking-links",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{active_campaign_id}}", "tracking-links"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "02 — Repeated Generation",
+			"item": [
+				{
+					"name": "Generate Second Tracking Link",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"",
+									"var body = pm.response.json();",
+									"var tl = body.data.tracking_link;",
+									"",
+									"pm.test('campaign_id remains the same', function () {",
+									"    pm.expect(tl.campaign_id).to.eql(Number(pm.environment.get('active_campaign_id')));",
+									"});",
+									"",
+									"pm.test('second id differs from first', function () {",
+									"    pm.expect(String(tl.id)).to.not.eql(pm.environment.get('first_tracking_link_id'));",
+									"});",
+									"",
+									"pm.test('second code differs from first', function () {",
+									"    pm.expect(tl.code).to.not.eql(pm.environment.get('first_tracking_code'));",
+									"});",
+									"",
+									"pm.test('second code matches /^[A-Za-z0-9]{32}$/', function () { pm.expect(tl.code).to.match(/^[A-Za-z0-9]{32}$/); });",
+									"",
+									"pm.test('response URL corresponds to second code', function () {",
+									"    var base = pm.environment.get('base_url').replace(/\\/$/, '');",
+									"    pm.expect(tl.url).to.eql(base + '/t/' + tl.code);",
+									"});",
+									"",
+									"pm.environment.set('second_tracking_link_id', String(tl.id));",
+									"pm.environment.set('second_tracking_code', tl.code);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{active_campaign_id}}/tracking-links",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{active_campaign_id}}", "tracking-links"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "03 — Authorization and Validation",
+			"item": [
+				{
+					"name": "Guest — No Auth",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{active_campaign_id}}/tracking-links",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{active_campaign_id}}", "tracking-links"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Foreign User — Owner's Active Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 403', function () { pm.response.to.have.status(403); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{foreign_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{active_campaign_id}}/tracking-links",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{active_campaign_id}}", "tracking-links"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Foreign User — Owner's Suspended Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 403 (authorization before status validation)', function () { pm.response.to.have.status(403); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{foreign_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{suspended_campaign_id}}/tracking-links",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{suspended_campaign_id}}", "tracking-links"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Missing Campaign",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 404', function () { pm.response.to.have.status(404); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/999999/tracking-links",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "999999", "tracking-links"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Draft Campaign — Owner",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 422', function () { pm.response.to.have.status(422); });",
+									"pm.test('errors.status exists', function () { pm.expect(pm.response.json().errors).to.have.property('status'); });",
+									"pm.test('errors.status includes correct message', function () {",
+									"    pm.expect(pm.response.json().errors.status[0]).to.include('Only an active campaign can generate tracking links.');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{draft_campaign_id}}/tracking-links",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{draft_campaign_id}}", "tracking-links"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Suspended Campaign — Owner",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 422', function () { pm.response.to.have.status(422); });",
+									"pm.test('errors.status exists', function () { pm.expect(pm.response.json().errors).to.have.property('status'); });",
+									"pm.test('errors.status includes correct message', function () {",
+									"    pm.expect(pm.response.json().errors.status[0]).to.include('Only an active campaign can generate tracking links.');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{suspended_campaign_id}}/tracking-links",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{suspended_campaign_id}}", "tracking-links"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "noauth"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": []
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": []
+			}
+		}
+	]
+}
