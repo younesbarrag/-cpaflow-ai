@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\CampaignController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\OfferController;
 use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\TrackingLinkController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -55,6 +56,11 @@ Route::prefix('v1')->group(function () {
 
         Route::post('/campaigns/{campaign}/suspend', [CampaignController::class, 'suspend'])
             ->name('api.v1.campaigns.suspend');
+
+        Route::post(
+            '/campaigns/{campaign}/tracking-links',
+            [TrackingLinkController::class, 'store']
+        )->name('api.v1.campaigns.tracking-links.store');
 
     });
 

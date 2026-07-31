@@ -6,6 +6,7 @@ use App\Enums\CampaignStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 final class Campaign extends Model
 {
@@ -38,5 +39,10 @@ final class Campaign extends Model
     public function offer(): BelongsTo
     {
         return $this->belongsTo(Offer::class);
+    }
+
+    public function trackingLinks(): HasMany
+    {
+        return $this->hasMany(TrackingLink::class);
     }
 }
