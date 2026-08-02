@@ -1,58 +1,109 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# CPAFlow AI — Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+> Backend Laravel de l'application CPAFlow AI — SaaS d'affiliation marketing.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+| Composant | Technologie |
+|-----------|-------------|
+| Framework | Laravel 13.8 |
+| PHP | 8.3+ |
+| Base de données | MySQL (`cpaflow_ai`) |
+| Auth web | Laravel Breeze (Blade, session) |
+| Auth API | Sanctum Bearer Token |
+| Frontend | Tailwind CSS + Alpine.js |
+| Tests | Pest + SQLite in-memory |
+| Style | Laravel Pint |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Interfaces
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+| Interface | Préfixe | Format |
+|-----------|---------|--------|
+| Blade (web) | `/` | HTML |
+| API REST | `/api/v1` | JSON |
+| Tracking public | `/t/{code}` | 302 Redirect |
 
-## Learning Laravel
+## Fonctionnalités implémentées
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Phase 1 — Données de base
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- **Offres CPA** — CRUD + archivage, filtrage par statut, recherche par nom
+- **Campagnes** — CRUD + lifecycle (`draft → active → suspended → active`)
+- **Liens de tracking** — Génération de code unique, redirection publique 302
+- **Clics de tracking** — Enregistrement avec hash IP (HMAC-SHA256), métadonnées UTM
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### Interface web (KAN-31)
 
-## Agentic Development
+- Dashboard avec compteurs et données récentes
+- Offres — Index paginé, création, édition, archivage
+- Campagnes — Index paginé, création, édition, détail, activation, suspension
+- Tracking links — Génération depuis la page détail campagne, copie clipboard
+- Profil — Édition informations et mot de passe
+- Auth — Login, register, mot de passe oublié
+- Design system — Palette `brand`, composants Blade réutilisables
+- Responsive — Tableaux desktop, cards mobile, menu hamburger
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Composants Blade réutilisables
+
+`page-header` · `status-badge` · `flash-message` · `empty-state` · `confirm-button` · `search-input` · `tracking-url` · `form-group`
+
+## Architecture
+
+- **Controllers** — Coordination HTTP uniquement, pas de logique métier
+- **Form Requests** — Validation réutilisée entre API et web
+- **Actions** — Un cas métier par classe (`CreateOfferAction`, `ActivateCampaignAction`, etc.)
+- **Policies** — Autorisation par ownership dérivée
+- **Enums** — `OfferStatus`, `CampaignStatus`, `UserRole`
+
+## Développement local
 
 ```bash
-composer require laravel/boost --dev
+# Installer les dépendances
+composer install
+npm install
 
-php artisan boost:install
+# Configuration
+cp .env.example .env
+php artisan key:generate
+
+# Base de données
+php artisan migrate
+
+# Build frontend
+npm run build
+
+# Lancer le serveur
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Tests
 
-## Contributing
+```bash
+# Tous les tests
+php artisan test
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# Tests web uniquement
+php artisan test tests/Feature/Web/
 
-## Code of Conduct
+# Vérification style
+vendor/bin/pint --test
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# Routes
+php artisan route:list
+```
 
-## Security Vulnerabilities
+## Phase 1 — Exclusions
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Les fonctionnalités suivantes ne font **pas** partie de la Phase 1 :
 
-## License
+- Conversions (postback)
+- Dépenses campagne
+- Statistiques / analytics
+- Intelligence artificielle (analyse, génération de contenu)
+- Click analytics / visiteurs uniques
+- Frontend admin
+- Docker / Azure
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Licence
+
+Propriétaire — CPAFlow AI

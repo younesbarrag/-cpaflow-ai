@@ -546,13 +546,37 @@ flowchart TB
     AI --> LLM
 ```
 
-### Interface Web
+### Interface Web — Implémentée (KAN-31)
 
-- **Technologie :** Laravel Blade avec Tailwind CSS
+- **Technologie :** Laravel Blade + Tailwind CSS + Alpine.js
 - **Authentification :** Session Laravel (driver `database`)
 - **Scaffolding :** Laravel Breeze (Blade)
-- **Pages :** login, register, dashboard, profil, mot de passe oublié, réinitialisation, vérification email
-- **Protection :** CSRF (`@csrf`), middleware `auth`, `guest`
+- **Design system :** Palette `brand` (50–900), ombres `card`/`card-hover` dans `tailwind.config.js`
+- **Composants Blade réutilisables :** `page-header`, `status-badge`, `flash-message`, `empty-state`, `confirm-button`, `search-input`, `tracking-url`, `form-group`
+- **Protection :** CSRF (`@csrf`), middleware `auth`, `verified`
+- **Réutilisation :** Les Form Requests API (`StoreOfferRequest`, `UpdateOfferRequest`, `StoreCampaignRequest`, `UpdateCampaignRequest`) sont réutilisées directement par les Controllers web — pas de duplication de logique
+- **Policies :** Mêmes Policies que l'API (`OfferPolicy`, `CampaignPolicy`, `TrackingLinkPolicy`) — autorisation par ownership
+- **Actions :** Mêmes Actions que l'API — pas de logique métier dupliquée dans les Controllers web
+- **Responsive :** Layout adaptatif — tableau sur desktop, cards sur mobile, menu hamburger
+- **Pages :** login, register, dashboard (overview), offers (CRUD + archive), campaigns (CRUD + lifecycle + tracking links), profil
+- **Routes web :**
+  - `GET /dashboard` — tableau de bord avec compteurs et données récentes
+  - `GET /offers` — liste paginée avec recherche et filtre par statut
+  - `GET /offers/create` — formulaire de création
+  - `POST /offers` — création (via `StoreOfferRequest`)
+  - `GET /offers/{offer}/edit` — formulaire d'édition
+  - `PATCH /offers/{offer}` — mise à jour (via `UpdateOfferRequest`)
+  - `POST /offers/{offer}/archive` — archivage (via `ArchiveOfferAction`)
+  - `GET /campaigns` — liste paginée avec badges de statut
+  - `GET /campaigns/create` — formulaire avec dropdown offers
+  - `POST /campaigns` — création (via `StoreCampaignRequest`)
+  - `GET /campaigns/{campaign}` — détail avec section tracking links
+  - `GET /campaigns/{campaign}/edit` — formulaire d'édition
+  - `PATCH /campaigns/{campaign}` — mise à jour (via `UpdateCampaignRequest`)
+  - `POST /campaigns/{campaign}/activate` — activation (via `ActivateCampaignAction`)
+  - `POST /campaigns/{campaign}/suspend` — suspension (via `SuspendCampaignAction`)
+  - `POST /campaigns/{campaign}/tracking-links` — génération lien (via `GenerateTrackingLinkAction`)
+  - `GET /t/{code}` — redirection tracking publique (KAN-15)
 
 ### API REST
 
@@ -578,6 +602,27 @@ flowchart TB
   - `POST /api/v1/campaigns/{campaign}/activate` — authentifié, activation (draft/suspended → active)
   - `POST /api/v1/campaigns/{campaign}/suspend` — authentifié, suspension (active → suspended)
   - `POST /api/v1/campaigns/{campaign}/tracking-links` — authentifié, génération de lien de tracking (KAN-14)
+
+### Routes web — Implémentées (KAN-31)
+
+> Implémenté (KAN-31) — Routes dans `routes/web.php`, middleware `auth`.
+
+- `GET /dashboard` — `DashboardController@index` — nom `dashboard`, middleware `auth`, `verified`
+- `GET /offers` — `OfferController@index` — liste paginée, recherche, filtre statut
+- `GET /offers/create` — `OfferController@create` — formulaire création
+- `POST /offers` — `OfferController@store` — via `StoreOfferRequest` (réutilisée depuis l'API)
+- `GET /offers/{offer}/edit` — `OfferController@edit` — formulaire édition
+- `PATCH /offers/{offer}` — `OfferController@update` — via `UpdateOfferRequest` (réutilisée depuis l'API)
+- `POST /offers/{offer}/archive` — `OfferController@archive` — via `ArchiveOfferAction`
+- `GET /campaigns` — `CampaignController@index` — liste paginée, eager-load offer
+- `GET /campaigns/create` — `CampaignController@create` — formulaire avec dropdown offers non archivées
+- `POST /campaigns` — `CampaignController@store` — via `StoreCampaignRequest` (réutilisée)
+- `GET /campaigns/{campaign}` — `CampaignController@show` — détail + tracking links
+- `GET /campaigns/{campaign}/edit` — `CampaignController@edit` — formulaire édition
+- `PATCH /campaigns/{campaign}` — `CampaignController@update` — via `UpdateCampaignRequest` (réutilisée)
+- `POST /campaigns/{campaign}/activate` — `CampaignController@activate` — via `ActivateCampaignAction`
+- `POST /campaigns/{campaign}/suspend` — `CampaignController@suspend` — via `SuspendCampaignAction`
+- `POST /campaigns/{campaign}/tracking-links` — `CampaignController@storeTrackingLink` — via `GenerateTrackingLinkAction`
 
 ### Couche métier
 
@@ -763,6 +808,11 @@ flowchart LR
 | RecordTrackingClickAction | Enregistrement du clic avec hash IP, métadonnées tronquées |
 | IpHasher | HMAC-SHA256, clé séparée par purpose, normalisation IPv4/IPv6 |
 | RedirectTrackingLinkController | Route publique 302, try-catch sur persistance, vérification URL sûre |
+| Interface web Blade (KAN-31) | Dashboard, Offers CRUD+archive, Campaigns CRUD+lifecycle+tracking links |
+| Design system | Palette `brand`, ombres `card`/`card-hover`, composants Blade réutilisables |
+| Web Controllers | `DashboardController`, `OfferController`, `CampaignController` |
+| Réutilisation API | Form Requests, Actions, Policies de l'API réutilisées directement |
+| Tests web (KAN-31) | `OfferWebTest`, `CampaignWebTest`, `ProfileWebTest`, `N1QueryTest` |
 
 ### Planifié
 
