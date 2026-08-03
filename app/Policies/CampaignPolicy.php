@@ -36,4 +36,9 @@ final class CampaignPolicy
     {
         return $this->ownsCampaign($user, $campaign);
     }
+
+    public function recordConversion(User $user, Campaign $campaign): bool
+    {
+        return $this->ownsCampaign($user, $campaign);
+    }
 }

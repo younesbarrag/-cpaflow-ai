@@ -45,4 +45,9 @@ final class Campaign extends Model
     {
         return $this->hasMany(TrackingLink::class);
     }
+
+    public function conversions(): HasMany
+    {
+        return $this->hasMany(Conversion::class);
+    }
 }
