@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AiAnalysisController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CampaignController;
 use App\Http\Controllers\Api\V1\CampaignExpenseController;
@@ -44,6 +45,11 @@ Route::prefix('v1')->group(function () {
 
         Route::post('/offers/{offer}/archive', [OfferController::class, 'archive'])
             ->name('api.v1.offers.archive');
+
+        Route::post('/offers/{offer}/analyze', [AiAnalysisController::class, 'analyze'])
+            ->name('api.v1.offers.analyze');
+        Route::get('/offers/{offer}/analysis', [AiAnalysisController::class, 'show'])
+            ->name('api.v1.offers.analysis');
 
         Route::get('/campaigns', [CampaignController::class, 'index'])
             ->name('api.v1.campaigns.index');
