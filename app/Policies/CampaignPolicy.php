@@ -41,4 +41,24 @@ final class CampaignPolicy
     {
         return $this->ownsCampaign($user, $campaign);
     }
+
+    public function viewExpenses(User $user, Campaign $campaign): bool
+    {
+        return $this->ownsCampaign($user, $campaign);
+    }
+
+    public function recordExpense(User $user, Campaign $campaign): bool
+    {
+        return $this->ownsCampaign($user, $campaign);
+    }
+
+    public function updateExpense(User $user, Campaign $campaign): bool
+    {
+        return $this->ownsCampaign($user, $campaign);
+    }
+
+    public function deleteExpense(User $user, Campaign $campaign): bool
+    {
+        return $this->ownsCampaign($user, $campaign);
+    }
 }

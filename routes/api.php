@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CampaignController;
+use App\Http\Controllers\Api\V1\CampaignExpenseController;
 use App\Http\Controllers\Api\V1\ConversionController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\OfferController;
@@ -67,6 +68,26 @@ Route::prefix('v1')->group(function () {
             '/campaigns/{campaign}/conversions',
             [ConversionController::class, 'store']
         )->name('api.v1.campaigns.conversions.store');
+
+        Route::get(
+            '/campaigns/{campaign}/expenses',
+            [CampaignExpenseController::class, 'index']
+        )->name('api.v1.campaigns.expenses.index');
+
+        Route::post(
+            '/campaigns/{campaign}/expenses',
+            [CampaignExpenseController::class, 'store']
+        )->name('api.v1.campaigns.expenses.store');
+
+        Route::patch(
+            '/campaigns/{campaign}/expenses/{expense}',
+            [CampaignExpenseController::class, 'update']
+        )->name('api.v1.campaigns.expenses.update');
+
+        Route::delete(
+            '/campaigns/{campaign}/expenses/{expense}',
+            [CampaignExpenseController::class, 'destroy']
+        )->name('api.v1.campaigns.expenses.destroy');
 
     });
 

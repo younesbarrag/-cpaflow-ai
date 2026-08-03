@@ -50,4 +50,9 @@ final class Campaign extends Model
     {
         return $this->hasMany(Conversion::class);
     }
+
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(CampaignExpense::class);
+    }
 }

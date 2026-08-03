@@ -143,6 +143,7 @@ erDiagram
 | R2 | Une offre archivée ne peut pas être utilisée pour une nouvelle campagne. | Stratégie confirmée (KAN-12) — offres archivées avec statut `archived` |
 | R3 | Une campagne suspendue ne peut pas générer un lien de tracking actif. | À confirmer dans l'OpenSpec de la User Story concernée |
 | R4 | Le champ `external_id` sur les conversions empêche les doublons lors des postbacks. | Implémenté (KAN-16) — UNIQUE constraint + DuplicateConversionException |
+| R5 | Les dépenses sont isolées par campagne et gérées en CRUD complet. | Implémenté (KAN-17) — nested-resource security, hard delete |
 | R5 | Seules les conversions approuvées (`approved`) comptent dans le revenu. | Planifié |
 | R6 | Le traitement IA utilise les statuts `pending`, `processing`, `completed`, `failed`. | Planifié |
 
@@ -273,19 +274,27 @@ updated_at         TIMESTAMP
 - **status :** `VARCHAR(20)` — valeurs `pending`, `approved`, `rejected` via enum `ConversionStatus`
 - **Pas de `tracking_link_id`, `tracking_click_id`, `offer_id`, `user_id`, `payout`**
 
-### Table `campaign_expenses` — Planifié
+### Table `campaign_expenses` — Implémenté (KAN-17)
 
-> Planifié — à confirmer dans l'OpenSpec de la User Story concernée.
+> Implémenté (KAN-17) — Migration `2026_08_03_000001_create_campaign_expenses_table`.
 
 ```
-id                 BIGINT          PK       auto_increment
-campaign_id        BIGINT          FK -> campaigns.id
-amount             DECIMAL(10,2)
-spent_at           DATE
+id                 BIGINT UNSIGNED PK       auto_increment
+campaign_id        BIGINT UNSIGNED FK -> campaigns.id  ON DELETE CASCADE
+amount             DECIMAL(12,2)   NOT NULL
+spent_at           DATE            NOT NULL
 description        TEXT            NULLABLE
 created_at         TIMESTAMP
 updated_at         TIMESTAMP
 ```
+
+- **Clé étrangère :** `campaign_id` → `campaigns.id` avec suppression en cascade
+- **amount :** `DECIMAL(12,2)` — capacité maximale 9 999 999 999,99, pas de DB default
+- **spent_at :** `DATE` — date de la dépense côté client, pas de DB default
+- **description :** `TEXT` NULLABLE, trim + empty→null normalization
+- **Pas de `user_id`, `offer_id`, `category`, `type`, `source`, `reference`, `status`, `deleted_at`**
+- **Ownership :** dérivée de `CampaignExpense → Campaign → Offer → User`
+- **Nested-resource security :** `$campaign->expenses()->findOrFail($expenseId)` — mismatch → 404
 
 ### Table `ai_analyses` — Planifié
 
@@ -610,6 +619,10 @@ flowchart TB
   - `POST /api/v1/campaigns/{campaign}/suspend` — authentifié, suspension (active → suspended)
   - `POST /api/v1/campaigns/{campaign}/tracking-links` — authentifié, génération de lien de tracking (KAN-14)
   - `POST /api/v1/campaigns/{campaign}/conversions` — authentifié, enregistrement conversion sans doublon (KAN-16)
+  - `GET /api/v1/campaigns/{campaign}/expenses` — authentifié, liste paginée des dépenses (KAN-17)
+  - `POST /api/v1/campaigns/{campaign}/expenses` — authentifié, création de dépense (KAN-17)
+  - `PATCH /api/v1/campaigns/{campaign}/expenses/{expense}` — authentifié, mise à jour partielle dépense (KAN-17)
+  - `DELETE /api/v1/campaigns/{campaign}/expenses/{expense}` — authentifié, suppression dépense (KAN-17)
 
 ### Routes web — Implémentées (KAN-31)
 
@@ -822,6 +835,15 @@ flowchart LR
 | StoreConversionRequest | Validation `external_id` requis + `source` optionnel, pas de rule `unique` |
 | ConversionResource | JSON : id, campaign_id, external_id, source, revenue, status, converted_at, timestamps |
 | ConversionFactory | Defaults valides, states forCampaign |
+| Campaign Expenses (CRUD) | Table `campaign_expenses`, modèle `CampaignExpense`, 4 routes API — KAN-17 |
+| RecordCampaignExpenseAction | Enregistrement dépense via `$campaign->expenses()->create()` |
+| UpdateCampaignExpenseAction | Mise à jour partielle dépense |
+| DeleteCampaignExpenseAction | Suppression dépense (hard delete) |
+| StoreCampaignExpenseRequest | Validation amount (required, numeric, gt:0, decimal:0,2, max:9999999999.99), spent_at (required, date, before_or_equal:today), description (nullable, max:10000) |
+| UpdateCampaignExpenseRequest | PATCH partiel avec rules sometimes |
+| CampaignExpenseResource | JSON : id, campaign_id, amount (2-decimal string), spent_at (YYYY-MM-DD), description, timestamps |
+| CampaignExpenseFactory | Defaults valides (positive amount, past/today date), states forCampaign |
+| CampaignPolicy (expenses) | viewExpenses, recordExpense, updateExpense, deleteExpense — nested-resource security (404 for foreign) |
 | Interface web Blade (KAN-31) | Dashboard, Offers CRUD+archive, Campaigns CRUD+lifecycle+tracking links |
 | Design system | Palette `brand`, ombres `card`/`card-hover`, composants Blade réutilisables |
 | Web Controllers | `DashboardController`, `OfferController`, `CampaignController` |
@@ -837,7 +859,7 @@ flowchart LR
 | TrackingLink (génération) | Implémenté (KAN-14) — `POST /api/v1/campaigns/{id}/tracking-links` |
 | TrackingClick (clic + redirect) | Implémenté (KAN-15) — `GET /t/{code}` — 302, enregistrement clic, privacy IP |
 | Conversions (enregistrement) | Implémenté (KAN-16) — `POST /api/v1/campaigns/{id}/conversions` — sans doublon |
-| Dépenses campagne | Table `campaign_expenses` planifiée |
+| Dépenses campagne | Implémenté (KAN-17) — CRUD complet — `GET/POST/PATCH/DELETE /api/v1/campaigns/{id}/expenses` |
 | Dashboard statistiques | Pas encore de route ni de vue |
 | Analyse IA | Table `ai_analyses` planifiée, pas de Job |
 | Génération IA | Table `ai_generations` planifiée, pas de Job |
