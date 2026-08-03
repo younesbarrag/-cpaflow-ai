@@ -623,7 +623,7 @@ flowchart TB
   - `POST /api/v1/campaigns/{campaign}/expenses` — authentifié, création de dépense (KAN-17)
   - `PATCH /api/v1/campaigns/{campaign}/expenses/{expense}` — authentifié, mise à jour partielle dépense (KAN-17)
   - `DELETE /api/v1/campaigns/{campaign}/expenses/{expense}` — authentifié, suppression dépense (KAN-17)
-  - `GET /api/v1/dashboard/statistics` — authentifié, statistiques agrégées du dashboard (KAN-18)
+  - `GET /api/v1/dashboard/statistics` — authentifié, statistiques agrégées du dashboard (KAN-18, filtres de période KAN-19)
 
 ### Routes web — Implémentées (KAN-31)
 
@@ -861,7 +861,7 @@ flowchart LR
 | TrackingClick (clic + redirect) | Implémenté (KAN-15) — `GET /t/{code}` — 302, enregistrement clic, privacy IP |
 | Conversions (enregistrement) | Implémenté (KAN-16) — `POST /api/v1/campaigns/{id}/conversions` — sans doublon |
 | Dépenses campagne | Implémenté (KAN-17) — CRUD complet — `GET/POST/PATCH/DELETE /api/v1/campaigns/{id}/expenses` |
-| Dashboard statistiques | Implémenté (KAN-18) — `GET /api/v1/dashboard/statistics` — agrégats all-time |
+| Dashboard statistiques | Implémenté (KAN-18) — `GET /api/v1/dashboard/statistics` — agrégats all-time, filtres de période (KAN-19) |
 | Analyse IA | Table `ai_analyses` planifiée, pas de Job |
 | Génération IA | Table `ai_generations` planifiée, pas de Job |
 | Docker | Pas de `Dockerfile` ni `docker-compose.yml` |

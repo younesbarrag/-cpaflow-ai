@@ -32,8 +32,11 @@
                 @endif
             </div>
 
-            {{-- Counts --}}
-            <div class="mb-8 flex items-center gap-6 text-sm text-gray-600">
+            {{-- Current Overview (Inventory — always all-time) --}}
+            <div class="mb-2">
+                <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Current overview</h3>
+            </div>
+            <div class="mb-6 flex items-center gap-6 text-sm text-gray-600">
                 <div class="flex items-center gap-2">
                     <span class="font-semibold text-gray-900">{{ $statistics['offer_count'] }}</span>
                     <span>{{ Str::plural('Offer', $statistics['offer_count']) }}</span>
@@ -43,9 +46,57 @@
                     <span class="font-semibold text-gray-900">{{ $statistics['campaign_count'] }}</span>
                     <span>{{ Str::plural('Campaign', $statistics['campaign_count']) }}</span>
                 </div>
+                <div class="w-px h-4 bg-gray-300"></div>
+                <div class="flex items-center gap-2">
+                    <span class="font-semibold text-gray-900">{{ $statistics['active_campaign_count'] }}</span>
+                    <span>Active {{ Str::plural('Campaign', $statistics['active_campaign_count']) }}</span>
+                </div>
             </div>
 
-            {{-- Statistics Cards --}}
+            {{-- Period Filter --}}
+            <form method="GET" action="{{ route('dashboard') }}" class="mb-4 flex flex-wrap items-end gap-3" id="period-filter-form">
+                <div>
+                    <label for="period" class="block text-sm font-medium text-gray-700 mb-1">Activity period</label>
+                    <select name="period" id="period" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                        <option value="">All time</option>
+                        <option value="today" {{ ($activePeriod ?? '') === 'today' ? 'selected' : '' }}>Today</option>
+                        <option value="last_7_days" {{ ($activePeriod ?? '') === 'last_7_days' ? 'selected' : '' }}>Last 7 days</option>
+                        <option value="last_30_days" {{ ($activePeriod ?? '') === 'last_30_days' ? 'selected' : '' }}>Last 30 days</option>
+                        <option value="this_month" {{ ($activePeriod ?? '') === 'this_month' ? 'selected' : '' }}>This month</option>
+                        <option value="custom" {{ ($activePeriod ?? '') === 'custom' ? 'selected' : '' }}>Custom range</option>
+                    </select>
+                </div>
+
+                @if (($activePeriod ?? '') === 'custom')
+                    <div>
+                        <label for="from" class="block text-sm font-medium text-gray-700 mb-1">From</label>
+                        <input type="date" name="from" id="from" value="{{ $activeFrom ?? '' }}" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500" />
+                    </div>
+                    <div>
+                        <label for="to" class="block text-sm font-medium text-gray-700 mb-1">To</label>
+                        <input type="date" name="to" id="to" value="{{ $activeTo ?? '' }}" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500" />
+                    </div>
+                    <button type="submit" class="px-3 py-1.5 bg-brand-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-brand-700 focus:bg-brand-700 active:bg-brand-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                        Apply
+                    </button>
+                @else
+                    <button type="submit" class="px-3 py-1.5 bg-gray-100 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                        Filter
+                    </button>
+                @endif
+
+                @if (($activePeriod ?? '') !== '' && ($activePeriod ?? '') !== null)
+                    <a href="{{ route('dashboard') }}" class="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 font-medium">
+                        Clear
+                    </a>
+                @endif
+            </form>
+
+            @if (($activePeriod ?? '') !== '' && ($activePeriod ?? '') !== null)
+                <p class="mb-6 text-xs text-gray-400">Inventory totals shown above are all-time. Activity metrics below are filtered.</p>
+            @endif
+
+            {{-- Activity Metrics (Period-filtered) --}}
             <div class="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
                 <div class="bg-white rounded-lg shadow-card p-4">
                     <div class="text-sm text-gray-500">Clicks</div>
@@ -173,4 +224,14 @@
             @endif
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        document.getElementById('period')?.addEventListener('change', function() {
+            if (this.value !== 'custom') {
+                document.getElementById('period-filter-form').submit();
+            }
+        });
+    </script>
+    @endpush
 </x-app-layout>

@@ -1,0 +1,755 @@
+{
+	"info": {
+		"_postman_id": "cpaflow-ai-kan19-collection",
+		"name": "CPAFlow AI — KAN-19 Statistics Period Filters",
+		"description": "End-to-end Postman verification for KAN-19: Statistics period filters.\n\nTests the authenticated dashboard statistics endpoint with period filtering.\nCovers predefined periods, custom ranges, validation errors, and authorization.\nUses real HTTP requests against the local CPAFlow API.\nRun with: npx newman run <collection> -e <env>",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [],
+	"item": [
+		{
+			"name": "00 — Setup",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Owner Credentials",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var ts = Date.now();",
+									"var email = 'kan19-owner-' + ts + '@example.com';",
+									"var password = 'PostmanPass123!';",
+									"pm.environment.set('kan19_owner_email', email);",
+									"pm.environment.set('kan19_owner_password', password);",
+									"var today = new Date().toISOString().slice(0, 10);",
+									"pm.environment.set('kan19_today', today);",
+									"console.log('KAN-19 Owner email: ' + email);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Owner",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"KAN-19 Postman Test Owner\",\n  \"email\": \"{{kan19_owner_email}}\",\n  \"password\": \"{{kan19_owner_password}}\",\n  \"password_confirmation\": \"{{kan19_owner_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Owner",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"var res = pm.response.json();",
+									"if (res.token) { pm.environment.set('kan19_owner_token', res.token); }"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{kan19_owner_email}}\",\n  \"password\": \"{{kan19_owner_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "01 — Empty All-Time Statistics",
+			"item": [
+				{
+					"name": "Request Statistics — Empty User (200 OK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.test('has data.statistics envelope', function () { pm.expect(res.data).to.have.property('statistics'); });",
+									"var s = res.data.statistics;",
+									"pm.test('offer_count is 0', function () { pm.expect(s.offer_count).to.equal(0); });",
+									"pm.test('click_count is 0', function () { pm.expect(s.click_count).to.equal(0); });",
+									"pm.test('revenue is 0.00', function () { pm.expect(s.revenue).to.equal('0.00'); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "02 — Create Test Data",
+			"item": [
+				{
+					"name": "Create Offer (201 Created)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"var res = pm.response.json();",
+									"if (res.data && res.data.offer) { pm.environment.set('kan19_offer_id', String(res.data.offer.id)); }"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"KAN-19 Test Offer\",\n  \"destination_url\": \"https://example.com/offer\",\n  \"payout\": \"25.00\",\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/offers",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "offers"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Campaign (201 Created)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"var res = pm.response.json();",
+									"if (res.data && res.data.campaign) { pm.environment.set('kan19_campaign_id', String(res.data.campaign.id)); }"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"KAN-19 Test Campaign\",\n  \"offer_id\": {{kan19_offer_id}},\n  \"traffic_source\": \"test\",\n  \"budget\": \"500.00\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Activate Campaign (200 OK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{kan19_campaign_id}}/activate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{kan19_campaign_id}}", "activate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Pending Conversion (201 Created)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var extId = 'ext-kan19-' + Date.now();",
+									"pm.environment.set('kan19_ext_id', extId);"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"external_id\": \"{{kan19_ext_id}}\",\n  \"source\": \"postman\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{kan19_campaign_id}}/conversions",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{kan19_campaign_id}}", "conversions"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Campaign Expense (201 Created)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": \"35.50\",\n  \"spent_at\": \"{{kan19_today}}\",\n  \"description\": \"KAN-19 test expense\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{kan19_campaign_id}}/expenses",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{kan19_campaign_id}}", "expenses"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "03 — Period Filtering",
+			"item": [
+				{
+					"name": "All-Time Statistics (200 OK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"var s = res.data.statistics;",
+									"pm.test('offer_count is 1', function () { pm.expect(s.offer_count).to.equal(1); });",
+									"pm.test('campaign_count is 1', function () { pm.expect(s.campaign_count).to.equal(1); });",
+									"pm.test('active_campaign_count is 1', function () { pm.expect(s.active_campaign_count).to.equal(1); });",
+									"pm.test('conversion_count is 1', function () { pm.expect(s.conversion_count).to.equal(1); });",
+									"pm.test('revenue is 0.00 (pending)', function () { pm.expect(s.revenue).to.equal('0.00'); });",
+									"pm.test('total_expenses is 35.50', function () { pm.expect(s.total_expenses).to.equal('35.50'); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Today Statistics (200 OK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"var s = res.data.statistics;",
+									"pm.test('total_expenses reflects today', function () { pm.expect(s.total_expenses).to.equal('35.50'); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics?period=today",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"],
+							"query": [
+								{ "key": "period", "value": "today" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Last 7 Days (200 OK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics?period=last_7_days",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"],
+							"query": [
+								{ "key": "period", "value": "last_7_days" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Last 30 Days (200 OK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics?period=last_30_days",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"],
+							"query": [
+								{ "key": "period", "value": "last_30_days" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "This Month (200 OK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics?period=this_month",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"],
+							"query": [
+								{ "key": "period", "value": "this_month" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Custom Range — Matching (200 OK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics?period=custom&from=2026-01-01&to={{kan19_today}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"],
+							"query": [
+								{ "key": "period", "value": "custom" },
+								{ "key": "from", "value": "2026-01-01" },
+								{ "key": "to", "value": "{{kan19_today}}" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Custom Range — Non-Matching Historical (200 OK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"var s = res.data.statistics;",
+									"pm.test('no expenses in 2020', function () { pm.expect(s.total_expenses).to.equal('0.00'); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics?period=custom&from=2020-01-01&to=2020-01-02",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"],
+							"query": [
+								{ "key": "period", "value": "custom" },
+								{ "key": "from", "value": "2020-01-01" },
+								{ "key": "to", "value": "2020-01-02" }
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "04 — Validation Errors",
+			"item": [
+				{
+					"name": "Invalid Period → 422",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 422', function () { pm.response.to.have.status(422); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics?period=invalid",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"],
+							"query": [
+								{ "key": "period", "value": "invalid" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Custom Without Dates → 422",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 422', function () { pm.response.to.have.status(422); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics?period=custom",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"],
+							"query": [
+								{ "key": "period", "value": "custom" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "From > To → 422",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 422', function () { pm.response.to.have.status(422); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics?period=custom&from=2026-08-03&to=2026-08-01",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"],
+							"query": [
+								{ "key": "period", "value": "custom" },
+								{ "key": "from", "value": "2026-08-03" },
+								{ "key": "to", "value": "2026-08-01" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Predefined + Custom Dates → 422",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 422', function () { pm.response.to.have.status(422); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics?period=today&from=2026-08-01&to=2026-08-03",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"],
+							"query": [
+								{ "key": "period", "value": "today" },
+								{ "key": "from", "value": "2026-08-01" },
+								{ "key": "to", "value": "2026-08-03" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Future Custom Range → 422",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 422', function () { pm.response.to.have.status(422); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan19_owner_token}}", "type": "text" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics?period=custom&from=2099-01-01&to=2099-12-31",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"],
+							"query": [
+								{ "key": "period", "value": "custom" },
+								{ "key": "from", "value": "2099-01-01" },
+								{ "key": "to", "value": "2099-12-31" }
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "05 — Authorization",
+			"item": [
+				{
+					"name": "Guest Request with Period → 401",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics?period=today",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"],
+							"query": [
+								{ "key": "period", "value": "today" }
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
