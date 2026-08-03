@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CampaignController;
+use App\Http\Controllers\Api\V1\ConversionController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\OfferController;
 use App\Http\Controllers\Api\V1\ProfileController;
@@ -61,6 +62,11 @@ Route::prefix('v1')->group(function () {
             '/campaigns/{campaign}/tracking-links',
             [TrackingLinkController::class, 'store']
         )->name('api.v1.campaigns.tracking-links.store');
+
+        Route::post(
+            '/campaigns/{campaign}/conversions',
+            [ConversionController::class, 'store']
+        )->name('api.v1.campaigns.conversions.store');
 
     });
 

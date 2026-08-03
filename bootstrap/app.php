@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\CannotGenerateTrackingLink;
+use App\Exceptions\DuplicateConversionException;
 use App\Exceptions\InvalidCampaignTransition;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Foundation\Application;
@@ -58,6 +59,26 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'message' => 'The tracking link could not be generated.',
                 ], 500);
+            },
+        );
+
+        $exceptions->render(
+            function (
+                DuplicateConversionException $exception,
+                Request $request,
+            ): ?JsonResponse {
+                if (! $request->is('api/*')) {
+                    return null;
+                }
+
+                return response()->json([
+                    'message' => 'A conversion with this external ID already exists.',
+                    'errors' => [
+                        'external_id' => [
+                            $exception->getMessage(),
+                        ],
+                    ],
+                ], 409);
             },
         );
     })

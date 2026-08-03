@@ -1,6 +1,6 @@
 # Conception Technique — CPAFlow AI
 
-> Dernière mise à jour : Juillet 2026
+> Dernière mise à jour : Août 2026
 > Branche : `docs/project-design`
 > Version du document : 1.0
 
@@ -142,7 +142,7 @@ erDiagram
 | R1 | Les données sont isolées par utilisateur authentifié — un Affiliate ne voit que ses propres offres, campagnes et statistiques. | Implémenté (Auth + API) |
 | R2 | Une offre archivée ne peut pas être utilisée pour une nouvelle campagne. | Stratégie confirmée (KAN-12) — offres archivées avec statut `archived` |
 | R3 | Une campagne suspendue ne peut pas générer un lien de tracking actif. | À confirmer dans l'OpenSpec de la User Story concernée |
-| R4 | Le champ `external_id` sur les conversions empêche les doublons lors des postbacks. | Planifié |
+| R4 | Le champ `external_id` sur les conversions empêche les doublons lors des postbacks. | Implémenté (KAN-16) — UNIQUE constraint + DuplicateConversionException |
 | R5 | Seules les conversions approuvées (`approved`) comptent dans le revenu. | Planifié |
 | R6 | Le traitement IA utilise les statuts `pending`, `processing`, `completed`, `failed`. | Planifié |
 
@@ -250,21 +250,28 @@ updated_at         TIMESTAMP
 - **Privacy IP :** Clé dérivée séparée par purpose (`tracking-ip-hash:v1` + `APP_KEY`), normalisation IPv4/IPv6 via `inet_pton`/`inet_ntop`
 - **Métadonnées :** User-Agent (512), Referer (2048), chaque champ UTM (255) — trim, empty→null, tronquature `mb_substr`
 
-### Table `conversions` — Planifié
+### Table `conversions` — Implémenté (KAN-16)
 
-> Planifié — à confirmer dans l'OpenSpec de la User Story concernée.
+> Implémenté (KAN-16) — Migration `2026_08_03_000000_create_conversions_table`.
 
 ```
-id                 BIGINT          PK       auto_increment
-campaign_id        BIGINT          FK -> campaigns.id
-external_id        VARCHAR(255)    UNIQUE  NULLABLE
+id                 BIGINT UNSIGNED PK       auto_increment
+campaign_id        BIGINT UNSIGNED FK -> campaigns.id  ON DELETE CASCADE
+external_id        VARCHAR(255)    UNIQUE   NOT NULL
 source             VARCHAR(255)    NULLABLE
-revenue            DECIMAL(10,2)
+revenue            DECIMAL(12,2)   NOT NULL
 status             VARCHAR(20)     DEFAULT 'pending'  INDEX
-converted_at       TIMESTAMP
+converted_at       TIMESTAMP       NOT NULL
 created_at         TIMESTAMP
 updated_at         TIMESTAMP
 ```
+
+- **Clé étrangère :** `campaign_id` → `campaigns.id` avec suppression en cascade
+- **external_id :** `VARCHAR(255)`, NOT NULL, UNIQUE — identifiant transactionnel de l'annonceur
+- **revenue :** `DECIMAL(12,2)` — snapshot côté serveur depuis `Offer.payout`, pas de DB default
+- **converted_at :** `TIMESTAMP`, NOT NULL — généré côté serveur (`now()`), pas de DB default
+- **status :** `VARCHAR(20)` — valeurs `pending`, `approved`, `rejected` via enum `ConversionStatus`
+- **Pas de `tracking_link_id`, `tracking_click_id`, `offer_id`, `user_id`, `payout`**
 
 ### Table `campaign_expenses` — Planifié
 
@@ -602,6 +609,7 @@ flowchart TB
   - `POST /api/v1/campaigns/{campaign}/activate` — authentifié, activation (draft/suspended → active)
   - `POST /api/v1/campaigns/{campaign}/suspend` — authentifié, suspension (active → suspended)
   - `POST /api/v1/campaigns/{campaign}/tracking-links` — authentifié, génération de lien de tracking (KAN-14)
+  - `POST /api/v1/campaigns/{campaign}/conversions` — authentifié, enregistrement conversion sans doublon (KAN-16)
 
 ### Routes web — Implémentées (KAN-31)
 
@@ -808,6 +816,12 @@ flowchart LR
 | RecordTrackingClickAction | Enregistrement du clic avec hash IP, métadonnées tronquées |
 | IpHasher | HMAC-SHA256, clé séparée par purpose, normalisation IPv4/IPv6 |
 | RedirectTrackingLinkController | Route publique 302, try-catch sur persistance, vérification URL sûre |
+| Conversion (enregistrement) | Table `conversions`, modèle `Conversion`, `POST /api/v1/campaigns/{id}/conversions` — KAN-16 |
+| RecordConversionAction | Enregistrement conversion avec snapshot revenue, détection doublon hardenée |
+| DuplicateConversionException | Exception domain → 409 JSON pour `external_id` en doublon |
+| StoreConversionRequest | Validation `external_id` requis + `source` optionnel, pas de rule `unique` |
+| ConversionResource | JSON : id, campaign_id, external_id, source, revenue, status, converted_at, timestamps |
+| ConversionFactory | Defaults valides, states forCampaign |
 | Interface web Blade (KAN-31) | Dashboard, Offers CRUD+archive, Campaigns CRUD+lifecycle+tracking links |
 | Design system | Palette `brand`, ombres `card`/`card-hover`, composants Blade réutilisables |
 | Web Controllers | `DashboardController`, `OfferController`, `CampaignController` |
@@ -822,7 +836,7 @@ flowchart LR
 | Campagnes (CRUD) | Implémenté (KAN-13) — CRUD + lifecycle sans delete/archive |
 | TrackingLink (génération) | Implémenté (KAN-14) — `POST /api/v1/campaigns/{id}/tracking-links` |
 | TrackingClick (clic + redirect) | Implémenté (KAN-15) — `GET /t/{code}` — 302, enregistrement clic, privacy IP |
-| Conversions (postback) | Table `conversions` planifiée |
+| Conversions (enregistrement) | Implémenté (KAN-16) — `POST /api/v1/campaigns/{id}/conversions` — sans doublon |
 | Dépenses campagne | Table `campaign_expenses` planifiée |
 | Dashboard statistiques | Pas encore de route ni de vue |
 | Analyse IA | Table `ai_analyses` planifiée, pas de Job |
