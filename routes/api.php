@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CampaignController;
 use App\Http\Controllers\Api\V1\CampaignExpenseController;
 use App\Http\Controllers\Api\V1\ConversionController;
+use App\Http\Controllers\Api\V1\DashboardStatisticsController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\OfferController;
 use App\Http\Controllers\Api\V1\ProfileController;
@@ -29,6 +30,9 @@ Route::prefix('v1')->group(function () {
 
         Route::patch('/profile', [ProfileController::class, 'update'])
             ->name('api.v1.profile.update');
+
+        Route::get('/dashboard/statistics', [DashboardStatisticsController::class, 'show'])
+            ->name('api.v1.dashboard.statistics');
 
         Route::get('/offers', [OfferController::class, 'index'])
             ->name('api.v1.offers.index');
