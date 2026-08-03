@@ -35,18 +35,45 @@
             {{-- Counts --}}
             <div class="mb-8 flex items-center gap-6 text-sm text-gray-600">
                 <div class="flex items-center gap-2">
-                    <span class="font-semibold text-gray-900">{{ $offerCount }}</span>
-                    <span>{{ Str::plural('Offer', $offerCount) }}</span>
+                    <span class="font-semibold text-gray-900">{{ $statistics['offer_count'] }}</span>
+                    <span>{{ Str::plural('Offer', $statistics['offer_count']) }}</span>
                 </div>
                 <div class="w-px h-4 bg-gray-300"></div>
                 <div class="flex items-center gap-2">
-                    <span class="font-semibold text-gray-900">{{ $campaignCount }}</span>
-                    <span>{{ Str::plural('Campaign', $campaignCount) }}</span>
+                    <span class="font-semibold text-gray-900">{{ $statistics['campaign_count'] }}</span>
+                    <span>{{ Str::plural('Campaign', $statistics['campaign_count']) }}</span>
+                </div>
+            </div>
+
+            {{-- Statistics Cards --}}
+            <div class="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                <div class="bg-white rounded-lg shadow-card p-4">
+                    <div class="text-sm text-gray-500">Clicks</div>
+                    <div class="mt-1 text-2xl font-semibold text-gray-900">{{ number_format($statistics['click_count']) }}</div>
+                </div>
+                <div class="bg-white rounded-lg shadow-card p-4">
+                    <div class="text-sm text-gray-500">Conversions</div>
+                    <div class="mt-1 text-2xl font-semibold text-gray-900">{{ number_format($statistics['conversion_count']) }}</div>
+                </div>
+                <div class="bg-white rounded-lg shadow-card p-4">
+                    <div class="text-sm text-gray-500">Revenue</div>
+                    <div class="mt-1 text-2xl font-semibold text-gray-900">${{ number_format((float) $statistics['revenue'], 2) }}</div>
+                    <div class="text-xs text-gray-400 mt-0.5">Approved only</div>
+                </div>
+                <div class="bg-white rounded-lg shadow-card p-4">
+                    <div class="text-sm text-gray-500">Expenses</div>
+                    <div class="mt-1 text-2xl font-semibold text-gray-900">${{ number_format((float) $statistics['total_expenses'], 2) }}</div>
+                </div>
+                <div class="bg-white rounded-lg shadow-card p-4">
+                    <div class="text-sm text-gray-500">Profit</div>
+                    <div class="mt-1 text-2xl font-semibold {{ (float) $statistics['profit'] < 0 ? 'text-red-600' : 'text-gray-900' }}">
+                        ${{ number_format((float) $statistics['profit'], 2) }}
+                    </div>
                 </div>
             </div>
 
             {{-- Empty State --}}
-            @if ($offerCount === 0 && $campaignCount === 0)
+            @if ($statistics['offer_count'] === 0 && $statistics['campaign_count'] === 0)
                 <div class="bg-white rounded-lg shadow-card p-8 text-center mb-8">
                     <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />

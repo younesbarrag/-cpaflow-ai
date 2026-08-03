@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Dashboard\GetDashboardStatisticsAction;
 use App\Enums\OfferStatus;
 use App\Models\Campaign;
 use App\Models\Offer;
@@ -10,7 +11,7 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, GetDashboardStatisticsAction $action): View
     {
         $user = $request->user();
 
@@ -27,21 +28,17 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        $offerCount = Offer::where('user_id', $user->id)->count();
-        $campaignCount = Campaign::whereHas('offer', function ($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })->count();
-
         $hasEligibleOffers = Offer::where('user_id', $user->id)
             ->where('status', '!=', OfferStatus::Archived)
             ->exists();
 
+        $statistics = $action->execute($user);
+
         return view('dashboard', [
             'recentOffers' => $recentOffers,
             'recentCampaigns' => $recentCampaigns,
-            'offerCount' => $offerCount,
-            'campaignCount' => $campaignCount,
             'hasEligibleOffers' => $hasEligibleOffers,
+            'statistics' => $statistics,
         ]);
     }
 }
