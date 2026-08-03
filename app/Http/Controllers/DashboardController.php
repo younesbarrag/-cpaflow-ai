@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Dashboard\GetDashboardStatisticsAction;
+use App\DTOs\DashboardStatisticsPeriod;
 use App\Enums\OfferStatus;
 use App\Models\Campaign;
 use App\Models\Offer;
@@ -11,8 +12,10 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request, GetDashboardStatisticsAction $action): View
-    {
+    public function index(
+        Request $request,
+        GetDashboardStatisticsAction $action,
+    ): View {
         $user = $request->user();
 
         $recentOffers = Offer::where('user_id', $user->id)
@@ -32,13 +35,17 @@ class DashboardController extends Controller
             ->where('status', '!=', OfferStatus::Archived)
             ->exists();
 
-        $statistics = $action->execute($user);
+        $period = DashboardStatisticsPeriod::fromRequest($request);
+        $statistics = $action->execute($user, $period);
 
         return view('dashboard', [
             'recentOffers' => $recentOffers,
             'recentCampaigns' => $recentCampaigns,
             'hasEligibleOffers' => $hasEligibleOffers,
             'statistics' => $statistics,
+            'activePeriod' => $request->input('period'),
+            'activeFrom' => $request->input('from'),
+            'activeTo' => $request->input('to'),
         ]);
     }
 }
