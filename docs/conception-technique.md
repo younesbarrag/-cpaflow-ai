@@ -635,6 +635,9 @@ flowchart TB
   - `PATCH /api/v1/campaigns/{campaign}/expenses/{expense}` — authentifié, mise à jour partielle dépense (KAN-17)
   - `DELETE /api/v1/campaigns/{campaign}/expenses/{expense}` — authentifié, suppression dépense (KAN-17)
   - `GET /api/v1/dashboard/statistics` — authentifié, statistiques agrégées du dashboard (KAN-18, filtres de période KAN-19)
+  - `GET /api/v1/admin/users` — admin, liste paginée des utilisateurs (recherche, filtre par rôle) — KAN-22
+  - `GET /api/v1/admin/users/{user}` — admin, détail d'un utilisateur — KAN-22
+  - `PATCH /api/v1/admin/users/{user}` — admin, modification du rôle — KAN-22
 
 ### Routes web — Implémentées (KAN-31)
 
@@ -860,6 +863,7 @@ flowchart LR
 | CampaignExpenseFactory | Defaults valides (positive amount, past/today date), states forCampaign |
 | CampaignPolicy (expenses) | viewExpenses, recordExpense, updateExpense, deleteExpense — nested-resource security (404 for foreign) |
 | Interface web Blade (KAN-31) | Dashboard, Offers CRUD+archive, Campaigns CRUD+lifecycle+tracking links |
+| Admin User Management (KAN-22) | `GET/PATCH /api/v1/admin/users` — list, show, updateRole. UserPolicy (self-demption), UpdateUserRoleAction (last-admin invariant, transaction-safe locking) |
 | Design system | Palette `brand`, ombres `card`/`card-hover`, composants Blade réutilisables |
 | Web Controllers | `DashboardController`, `OfferController`, `CampaignController` |
 | Réutilisation API | Form Requests, Actions, Policies de l'API réutilisées directement |
