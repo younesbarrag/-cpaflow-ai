@@ -1,0 +1,254 @@
+{
+	"info": {
+		"_postman_id": "cpaflow-ai-kan22-collection",
+		"name": "CPAFlow AI — KAN-22 Admin User Management",
+		"description": "End-to-end Postman verification for KAN-22: Admin User Management.\n\nTests authorization rules for admin endpoints. No deterministic admin account exists,\nso Newman only verifies that non-admin users are blocked (403) and guests are rejected (401).\nPest is authoritative for all admin-success scenarios.\nRun with: npx newman run <collection> -e <env>",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [],
+	"item": [
+		{
+			"name": "00 — Setup",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Affiliate Credentials",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var ts = Date.now();",
+									"var email = 'kan22-affiliate-' + ts + '@example.com';",
+									"var password = 'PostmanPass123!';",
+									"pm.environment.set('kan22_affiliate_email', email);",
+									"pm.environment.set('kan22_affiliate_password', password);",
+									"console.log('KAN-22 Affiliate email: ' + email);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register Affiliate",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"KAN-22 Affiliate\",\n  \"email\": \"{{kan22_affiliate_email}}\",\n  \"password\": \"{{kan22_affiliate_password}}\",\n  \"password_confirmation\": \"{{kan22_affiliate_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Affiliate",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('kan22_affiliate_token', res.token);",
+									"console.log('KAN-22 Affiliate token acquired');"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{kan22_affiliate_email}}\",\n  \"password\": \"{{kan22_affiliate_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "01 — Authorization (Affiliate blocked)",
+			"item": [
+				{
+					"name": "Affiliate calls admin index → 403",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 403', function () { pm.response.to.have.status(403); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan22_affiliate_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "users"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Affiliate calls admin show → 403",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 403', function () { pm.response.to.have.status(403); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan22_affiliate_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "users", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Affiliate calls admin update → 403",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 403', function () { pm.response.to.have.status(403); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{kan22_affiliate_token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"admin\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "users", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "02 — Authorization (Guest blocked)",
+			"item": [
+				{
+					"name": "Guest calls admin index → 401",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "users"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

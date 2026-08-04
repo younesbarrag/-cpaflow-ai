@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AdminUserController;
 use App\Http\Controllers\Api\V1\AiAnalysisController;
 use App\Http\Controllers\Api\V1\AiGenerationController;
 use App\Http\Controllers\Api\V1\AuthController;
@@ -106,6 +107,15 @@ Route::prefix('v1')->group(function () {
             '/campaigns/{campaign}/expenses/{expense}',
             [CampaignExpenseController::class, 'destroy']
         )->name('api.v1.campaigns.expenses.destroy');
+
+        Route::middleware('admin')->prefix('admin')->group(function () {
+            Route::get('/users', [AdminUserController::class, 'index'])
+                ->name('api.v1.admin.users.index');
+            Route::get('/users/{user}', [AdminUserController::class, 'show'])
+                ->name('api.v1.admin.users.show');
+            Route::patch('/users/{user}', [AdminUserController::class, 'update'])
+                ->name('api.v1.admin.users.update');
+        });
 
     });
 
