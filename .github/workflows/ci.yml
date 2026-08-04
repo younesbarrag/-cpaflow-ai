@@ -73,7 +73,8 @@ jobs:
         run: php artisan key:generate
 
       - name: Verify MySQL database driver
-        run: php artisan tinker --execute="assert(config('database.default') === 'mysql', 'CI database driver is not MySQL'); echo 'Database driver: ' . config('database.default') . PHP_EOL;"
+        run: |
+          php artisan tinker --execute="assert(config('database.default') === 'mysql', 'CI database driver is not MySQL'); echo 'Database driver: ' . config('database.default') . PHP_EOL;"
 
       - name: Run database migrations
         run: php artisan migrate --force
