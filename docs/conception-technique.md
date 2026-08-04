@@ -145,7 +145,7 @@ erDiagram
 | R4 | Le champ `external_id` sur les conversions empêche les doublons lors des postbacks. | Implémenté (KAN-16) — UNIQUE constraint + DuplicateConversionException |
 | R5 | Les dépenses sont isolées par campagne et gérées en CRUD complet. | Implémenté (KAN-17) — nested-resource security, hard delete |
 | R5 | Seules les conversions approuvées (`approved`) comptent dans le revenu. | Planifié |
-| R6 | Le traitement IA utilise les statuts `pending`, `processing`, `completed`, `failed`. | Planifié |
+| R6 | Le traitement IA utilise les statuts `pending`, `processing`, `completed`, `failed`. | Implémenté (KAN-20) — AiProcessStatus enum, AnalyzeOfferJob, RequestOfferAnalysisAction |
 
 ---
 
@@ -296,16 +296,23 @@ updated_at         TIMESTAMP
 - **Ownership :** dérivée de `CampaignExpense → Campaign → Offer → User`
 - **Nested-resource security :** `$campaign->expenses()->findOrFail($expenseId)` — mismatch → 404
 
-### Table `ai_analyses` — Planifié
+### Table `ai_analyses` — Implémenté (KAN-20)
 
-> Planifié — à confirmer dans l'OpenSpec de la User Story concernée.
+> Implémenté (KAN-20) — Schéma adapté: colonnes explicites au lieu de `resultats JSON`.
+> `input_hash` SHA-256 pour la détection de stale. `unique(offer_id)` pour garantir une seule analyse par offre.
 
 ```
 id                 BIGINT          PK       auto_increment
-offer_id           BIGINT          FK -> offers.id
+offer_id           BIGINT          FK -> offers.id  UNIQUE  CASCADE DELETE
 status             VARCHAR(20)     DEFAULT 'pending'  INDEX
-resultats          JSON            NULLABLE
-score              DECIMAL(5,2)    NULLABLE
+score              TINYINT UNSIGNED NULLABLE  (0–100)
+summary            TEXT            NULLABLE
+strengths          JSON            NULLABLE
+weaknesses         JSON            NULLABLE
+recommendations    JSON            NULLABLE
+input_hash         CHAR(64)        NULLABLE
+provider           VARCHAR(50)     NULLABLE
+model              VARCHAR(100)    NULLABLE
 error_message      TEXT            NULLABLE
 completed_at       TIMESTAMP       NULLABLE
 created_at         TIMESTAMP

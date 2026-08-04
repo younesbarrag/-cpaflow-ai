@@ -22,6 +22,11 @@ final class OfferPolicy
         return $this->ownsOffer($user, $offer);
     }
 
+    public function analyze(User $user, Offer $offer): bool
+    {
+        return $this->ownsOffer($user, $offer);
+    }
+
     private function ownsOffer(User $user, Offer $offer): bool
     {
         return $user->id === $offer->user_id;

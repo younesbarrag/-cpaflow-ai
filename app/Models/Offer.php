@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['name', 'destination_url', 'payout', 'status', 'description'])]
 class Offer extends Model
@@ -66,5 +67,13 @@ class Offer extends Model
     public function campaigns(): HasMany
     {
         return $this->hasMany(Campaign::class);
+    }
+
+    /**
+     * @return HasOne<AiAnalysis, $this>
+     */
+    public function analysis(): HasOne
+    {
+        return $this->hasOne(AiAnalysis::class);
     }
 }
