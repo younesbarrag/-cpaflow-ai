@@ -76,4 +76,12 @@ class Offer extends Model
     {
         return $this->hasOne(AiAnalysis::class);
     }
+
+    /**
+     * @return HasMany<AiGeneration, $this>
+     */
+    public function generations(): HasMany
+    {
+        return $this->hasMany(AiGeneration::class);
+    }
 }

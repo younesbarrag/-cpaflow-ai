@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AiAnalysisController;
+use App\Http\Controllers\Api\V1\AiGenerationController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CampaignController;
 use App\Http\Controllers\Api\V1\CampaignExpenseController;
@@ -34,6 +35,13 @@ Route::prefix('v1')->group(function () {
 
         Route::get('/dashboard/statistics', [DashboardStatisticsController::class, 'show'])
             ->name('api.v1.dashboard.statistics');
+
+        Route::post('/offers/{offer}/generate', [AiGenerationController::class, 'store'])
+            ->name('api.v1.offers.generate');
+        Route::get('/offers/{offer}/generations', [AiGenerationController::class, 'index'])
+            ->name('api.v1.offers.generations.index');
+        Route::get('/offers/{offer}/generations/{generation}', [AiGenerationController::class, 'show'])
+            ->name('api.v1.offers.generations.show');
 
         Route::get('/offers', [OfferController::class, 'index'])
             ->name('api.v1.offers.index');

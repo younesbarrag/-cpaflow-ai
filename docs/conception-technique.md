@@ -319,25 +319,29 @@ created_at         TIMESTAMP
 updated_at         TIMESTAMP
 ```
 
-### Table `ai_generations` — Planifié
+### Table `ai_generations` — Implémenté (KAN-21)
 
-> Planifié — à confirmer dans l'OpenSpec de la User Story concernée.
+> Implémenté dans KAN-21. Historique de générations : une Offre peut avoir plusieurs générations.
 
 ```
 id                 BIGINT          PK       auto_increment
-offer_id           BIGINT          FK -> offers.id
-language           VARCHAR(10)     NULLABLE
-tone               VARCHAR(50)     NULLABLE
-platform           VARCHAR(50)     NULLABLE
+offer_id           BIGINT          FK -> offers.id  CASCADE ON DELETE
 hooks              JSON            NULLABLE
 captions           JSON            NULLABLE
-calls_to_action    JSON            NULLABLE
 status             VARCHAR(20)     DEFAULT 'pending'  INDEX
+input_hash         CHAR(64)        NULLABLE
+provider           VARCHAR(50)     NULLABLE
+model              VARCHAR(100)    NULLABLE
 error_message      TEXT            NULLABLE
 completed_at       TIMESTAMP       NULLABLE
 created_at         TIMESTAMP
 updated_at         TIMESTAMP
 ```
+
+**Déviations du MLD original :**
+- Supprimé : `language`, `tone`, `platform`, `calls_to_action` (hors périmètre KAN-21)
+- Ajouté : `input_hash`, `provider`, `model` (même pattern que KAN-20)
+- Pas de `UNIQUE(offer_id)` — modèle historique (plusieurs générations par Offre)
 
 ### Tables techniques Laravel
 
