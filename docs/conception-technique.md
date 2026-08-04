@@ -710,18 +710,19 @@ flowchart LR
 flowchart LR
     Dev["Développeur<br/>Windows / XAMPP"] --> Git["Git"]
     Git --> GitHub["GitHub"]
-    GitHub --> CI["GitHub Actions"]
-    CI --> Install["composer install"]
+    GitHub --> CI["GitHub Actions CI"]
+    CI --> PHP["PHP 8.4"]
+    CI --> MySQL["MySQL 8.4<br/>cpaflow_test"]
     CI --> Pest["Pest tests"]
     CI --> Pint["Laravel Pint"]
     CI --> Npm["npm build"]
-    CI --> DockerBuild["Docker build"]
-    DockerBuild --> AzureVM["Azure VM"]
+    GitHub --> DockerBuild["Docker build<br/>(KAN-32)"]
+    DockerBuild --> AzureVM["Azure VM<br/>(KAN-26)"]
     AzureVM --> Supervisor["Supervisor"]
     Supervisor --> Laravel["Application Laravel"]
     Supervisor --> QueueWorker["Queue Worker"]
-    Laravel --> MySQL[("MySQL")]
-    QueueWorker --> MySQL
+    Laravel --> MySQLProd[("MySQL<br/>cpaflow_ai")]
+    QueueWorker --> MySQLProd
 ```
 
 ### Développement local
@@ -741,9 +742,11 @@ flowchart LR
 | Outil | Rôle |
 |-------|------|
 | Pest | Framework de tests (syntaxe expressive) |
-| SQLite in-memory | Base de données de test (pas de MySQL) |
+| SQLite in-memory | Base de données de test locale (pas de MySQL) |
+| MySQL 8.4 | Base de données de test CI (GitHub Actions service éphémère) |
 | Laravel Pint | Vérification du style de code |
 | `npm run build` | Vérification du build frontend |
+| GitHub Actions | Intégration continue — Backend Tests + Frontend Build |
 
 ### Production cible
 
@@ -872,7 +875,7 @@ flowchart LR
 | Analyse IA | Table `ai_analyses` planifiée, pas de Job |
 | Génération IA | Table `ai_generations` planifiée, pas de Job |
 | Docker | Pas de `Dockerfile` ni `docker-compose.yml` |
-| CI/CD | Pas de pipeline GitHub Actions |
+| CI/CD | Implémenté (KAN-25) — GitHub Actions CI, MySQL 8.4 éphémère, zero secrets |
 | Déploiement Azure | Pas de configuration Azure |
 
 ---

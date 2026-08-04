@@ -12,8 +12,9 @@
 | Auth web | Laravel Breeze (Blade, session) |
 | Auth API | Sanctum Bearer Token |
 | Frontend | Tailwind CSS + Alpine.js |
-| Tests | Pest + SQLite in-memory |
+| Tests | Pest + SQLite in-memory (local) / MySQL 8.4 (CI) |
 | Style | Laravel Pint |
+| CI | GitHub Actions |
 
 ## Interfaces
 
@@ -90,6 +91,46 @@ vendor/bin/pint --test
 
 # Routes
 php artisan route:list
+```
+
+## Intégration Continue (CI)
+
+Le projet utilise **GitHub Actions** pour valider automatiquement chaque Pull Request avant merge.
+
+### Déclencheurs
+
+- **Pull Request** ciblant `main` — CI s'exécute
+- **Push/merge** vers `main` — CI s'exécute
+- Push sur branche feature sans PR ouverte — CI ne s'exécute pas
+
+### Jobs CI
+
+| Job | Vérifications |
+|-----|---------------|
+| **Backend Tests** | `composer validate --strict`, Pest tests (MySQL 8.4), Laravel Pint |
+| **Frontend Build** | `npm ci`, `npm run build` (Vite) |
+
+### Base de données CI
+
+| Environnement | Base de données |
+|---------------|-----------------|
+| Local | SQLite :memory: (rapide, aucun setup) |
+| CI (GitHub Actions) | MySQL 8.4 (service éphémère, fidélité production) |
+
+### Secrets requis
+
+**Aucun.** Aucune clé AI, aucune credential de base de données, aucun token de déploiement.
+
+### Branch protection (recommandé)
+
+Après merge de KAN-25, configurer manuellement dans GitHub :
+
+```
+Branch protection rule pour `main` :
+  ☑ Require status checks before merging
+    - Backend Tests
+    - Frontend Build
+  ☑ Require branches to be up to date before merging
 ```
 
 ## Phase 1 — Exclusions
