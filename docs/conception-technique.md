@@ -888,6 +888,68 @@ flowchart LR
 
 ---
 
+## 9b. Données de démo (KAN-23)
+
+### Commande
+
+```bash
+php artisan db:seed --class=DemoDataSeeder
+```
+
+> **DEMO ONLY — NE JAMAIS UTILISER CES IDENTIFIANTS EN PRODUCTION**
+
+### Comptes démo
+
+| Email | Mot de passe | Rôle |
+|-------|-------------|------|
+| `admin@example.test` | `password` | admin |
+| `affiliate@example.test` | `password` | affiliate |
+| `affiliate2@example.test` | `password` | affiliate |
+
+### Graph métier démo (affiliate@example.test)
+
+```
+Affiliate
+├── DEMO — Fitness Offer (active, $25.00)
+│   ├── DEMO — Active Campaign (active)
+│   │   ├── TrackingLink (code: demo1234567890demo1234567890de)
+│   │   ├── TrackingClick ×3
+│   │   ├── Conversion ×3 (2 approved, 1 pending)
+│   │   └── CampaignExpense ×2 ($40 + $30)
+│   ├── AiAnalysis (completed, score 85)
+│   └── AiGeneration (completed)
+├── DEMO — Draft Offer (draft, $10.00)
+│   └── DEMO — Draft Campaign (draft)
+└── DEMO — Archived Offer (archived, $15.00)
+```
+
+### Totaux dashboard all-time attendus
+
+| Métrique | Valeur |
+|----------|--------|
+| offer_count | 3 |
+| campaign_count | 2 |
+| active_campaign_count | 1 |
+| click_count | 3 |
+| conversion_count | 3 |
+| revenue | 50.00 |
+| total_expenses | 70.00 |
+| profit | -20.00 |
+
+### Points clés
+
+- Aucun appel IA externe lors du seeding
+- Idempotent : rerun ne crée pas de doublons
+- Bloqué en production (`app()->environment('production')`)
+- `DatabaseSeeder` reste inchangé
+- Les dates utilisent des bornes explicites (aujourd'hui, début de mois, il y a 15 jours) pour rester significatif aux frontières de mois
+
+### dette fonctionnelle connue
+
+**Approbation/Rejection des conversions** : Aucun endpoint HTTP ne permet actuellement de transitionner une conversion de `Pending` vers `Approved` ou `Rejected`. Les conversions `Approved` dans les données démo sont créées directement en base pour démontrer le comportement du dashboard. Ceci n'est PAS un blocageur KAN-23, mais un **blocageur de release/functional-completteness** du projet. Recommandation : story séparée après KAN-23.
+
+---
+
 ## 10. Points à confirmer
 
 | # | Décision | User Story concernée |

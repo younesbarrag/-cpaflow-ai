@@ -243,7 +243,7 @@ describe('Campaign Web — Tracking Links', function () {
 
 describe('Campaign Web — Flash Messages', function () {
     test('success flash renders after campaign creation', function () {
-        $offer = Offer::factory()->for($this->user)->create();
+        $offer = Offer::factory()->for($this->user)->draft()->create();
 
         $response = $this->actingAs($this->user)->post(route('campaigns.store'), [
             'offer_id' => $offer->id,

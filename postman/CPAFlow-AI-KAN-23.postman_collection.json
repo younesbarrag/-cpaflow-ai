@@ -1,0 +1,799 @@
+{
+	"info": {
+		"_postman_id": "cpaflow-ai-kan23-collection",
+		"name": "CPAFlow AI — KAN-23 Final QA E2E",
+		"description": "Final QA E2E collection for KAN-23: Final QA, Test Stability & Demo Data.\n\nPrerequisite: php artisan db:seed --class=DemoDataSeeder\n\nUses a unique QA affiliate per run (no dependency on stale variables). Tests full business flow, admin endpoints, AI reads, and authorization rules.\n\nRun with: npx newman run <collection> -e postman/CPAFlow-AI-Local.postman_environment.json --ignore-redirects",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [],
+	"item": [
+		{
+			"name": "00 — Health & Setup",
+			"item": [
+				{
+					"name": "Health Check → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate QA Credentials",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var ts = Date.now();",
+									"var email = 'kan23-qa-' + ts + '@example.com';",
+									"var password = 'QaPass123!';",
+									"var today = new Date().toISOString().split('T')[0];",
+									"pm.environment.set('qa_email', email);",
+									"pm.environment.set('qa_password', password);",
+									"pm.environment.set('qa_spent_at', today);",
+									"console.log('QA Affiliate email: ' + email);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "01 — QA Affiliate Flow",
+			"item": [
+				{
+					"name": "Register QA Affiliate → 201",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });",
+									"var res = pm.response.json();",
+									"pm.environment.set('qa_user_id', res.data.user.id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"QA Affiliate\",\n  \"email\": \"{{qa_email}}\",\n  \"password\": \"{{qa_password}}\",\n  \"password_confirmation\": \"{{qa_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login QA Affiliate → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('qa_token', res.token);",
+									"console.log('QA Affiliate token acquired');"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{qa_email}}\",\n  \"password\": \"{{qa_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Offer → 201",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('qa_offer_id', res.data.offer.id);",
+									"console.log('QA Offer ID: ' + res.data.offer.id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{qa_token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"QA Test Offer\",\n  \"destination_url\": \"https://qa.example.test/offer\",\n  \"payout\": \"15.00\",\n  \"status\": \"draft\",\n  \"description\": \"Offer created by QA E2E collection.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/offers",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "offers"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Offers → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('response is paginated', function () {",
+									"  var res = pm.response.json();",
+									"  pm.expect(res.meta).to.exist;",
+									"  pm.expect(res.meta.total).to.be.at.least(1);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{qa_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/offers",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "offers"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Campaign → 201",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('qa_campaign_id', res.data.campaign.id);",
+									"console.log('QA Campaign ID: ' + res.data.campaign.id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{qa_token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"offer_id\": {{qa_offer_id}},\n  \"name\": \"QA Test Campaign\",\n  \"traffic_source\": \"Google Ads\",\n  \"budget\": \"300.00\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Activate Campaign → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.test('campaign is active', function () { pm.expect(res.data.campaign.status).to.equal('active'); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{qa_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{qa_campaign_id}}/activate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{qa_campaign_id}}", "activate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Tracking Link → 201",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('qa_tracking_code', res.data.tracking_link.code);",
+									"console.log('QA Tracking code: ' + res.data.tracking_link.code);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{qa_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{qa_campaign_id}}/tracking-links",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{qa_campaign_id}}", "tracking-links"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Record Public Tracking Click → 302",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 302 redirect', function () { pm.response.to.have.status(302); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "User-Agent", "value": "QA-Newman/1.0" },
+							{ "key": "Referer", "value": "https://qa-example.test" }
+						],
+						"url": {
+							"raw": "{{base_url}}/t/{{qa_tracking_code}}?utm_source=qa&utm_medium=e2e&utm_campaign=kan23&utm_content=qa-click-1",
+							"host": ["{{base_url}}"],
+							"path": ["t", "{{qa_tracking_code}}"],
+							"query": [
+								{ "key": "utm_source", "value": "qa" },
+								{ "key": "utm_medium", "value": "e2e" },
+								{ "key": "utm_campaign", "value": "kan23" },
+								{ "key": "utm_content", "value": "qa-click-1" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Record Conversion → 201",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('qa_conversion_id', res.data.conversion.id);",
+									"pm.test('conversion is pending', function () { pm.expect(res.data.conversion.status).to.equal('pending'); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{qa_token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"external_id\": \"qa-txn-{{qa_campaign_id}}-001\",\n  \"source\": \"qa-e2e\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{qa_campaign_id}}/conversions",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{qa_campaign_id}}", "conversions"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Record Campaign Expense → 201",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('qa_expense_id', res.data.campaign_expense.id);",
+									"console.log('QA Expense ID: ' + res.data.campaign_expense.id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{qa_token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": \"50.00\",\n  \"spent_at\": \"{{qa_spent_at}}\",\n  \"description\": \"QA E2E test expense\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{qa_campaign_id}}/expenses",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{qa_campaign_id}}", "expenses"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Dashboard Statistics (All Time) → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.test('has offer_count', function () { pm.expect(res.data.statistics.offer_count).to.be.at.least(1); });",
+									"pm.test('has campaign_count', function () { pm.expect(res.data.statistics.campaign_count).to.be.at.least(1); });",
+									"pm.test('has click_count', function () { pm.expect(res.data.statistics.click_count).to.be.at.least(1); });",
+									"pm.test('has conversion_count', function () { pm.expect(res.data.statistics.conversion_count).to.be.at.least(1); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{qa_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Dashboard Statistics (Period: today) → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.test('response has statistics', function () { pm.expect(res.data.statistics).to.exist; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{qa_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics?period=today",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"],
+							"query": [
+								{ "key": "period", "value": "today" }
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "02 — Authorization (Affiliate blocked)",
+			"item": [
+				{
+					"name": "Affiliate calls admin index → 403",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 403', function () { pm.response.to.have.status(403); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{qa_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "users"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Affiliate calls admin show → 403",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 403', function () { pm.response.to.have.status(403); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{qa_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "users", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "03 — Authorization (Guest blocked)",
+			"item": [
+				{
+					"name": "Guest calls protected API → 401",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "users"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Guest calls offers → 401",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/offers",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "offers"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "04 — Admin Flow (Seeded Demo Admin)",
+			"item": [
+				{
+					"name": "Login Demo Admin → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('admin_token', res.token);",
+									"console.log('Admin token acquired');"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@example.test\",\n  \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Admin List Users → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.test('users list is returned', function () { pm.expect(res.data).to.exist; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{admin_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "users"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Show Demo Affiliate → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.test('user data returned', function () { pm.expect(res.data).to.exist; pm.expect(res.data.id).to.exist; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{admin_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/users/{{qa_user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "admin", "users", "{{qa_user_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "05 — AI Reads (Seeded Demo Data)",
+			"item": [
+				{
+					"name": "Login Demo Affiliate → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('affiliate_token', res.token);",
+									"console.log('Demo Affiliate token acquired');"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"affiliate@example.test\",\n  \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Discover Demo Offer ID → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"var offers = res.data;",
+									"var activeOffer = offers.find(function(o) { return o.status === 'active'; });",
+									"if (activeOffer) {",
+									"  pm.environment.set('demo_offer_id_for_ai', activeOffer.id);",
+									"  console.log('Demo active offer ID: ' + activeOffer.id);",
+									"} else {",
+									"  console.log('No active offer found in demo data');",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{affiliate_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/offers",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "offers"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Demo AI Analysis → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.test('analysis is completed', function () { pm.expect(res.data.status).to.equal('completed'); });",
+									"pm.test('analysis has score', function () { pm.expect(res.data.score).to.equal(85); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{affiliate_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/offers/{{demo_offer_id_for_ai}}/analysis",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "offers", "{{demo_offer_id_for_ai}}", "analysis"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Demo AI Generation History → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.test('generations list exists', function () { pm.expect(res.data).to.exist; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{affiliate_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/offers/{{demo_offer_id_for_ai}}/generations",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "offers", "{{demo_offer_id_for_ai}}", "generations"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

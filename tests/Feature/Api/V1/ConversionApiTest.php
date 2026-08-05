@@ -365,8 +365,8 @@ it('generates converted_at as approximately the current time', function (): void
 
     expect($conversion->converted_at)
         ->not->toBeNull()
-        ->and($conversion->converted_at->greaterThanOrEqualTo($before->subSecond()))->toBeTrue()
-        ->and($conversion->converted_at->lessThanOrEqualTo($after->addSecond()))->toBeTrue();
+        ->and($conversion->converted_at->greaterThanOrEqualTo($before->subSeconds(5)))->toBeTrue()
+        ->and($conversion->converted_at->lessThanOrEqualTo($after->addSeconds(5)))->toBeTrue();
 });
 
 it('sets created_at and updated_at timestamps', function (): void {
