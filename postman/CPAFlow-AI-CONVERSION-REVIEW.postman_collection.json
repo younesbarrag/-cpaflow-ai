@@ -1,0 +1,635 @@
+{
+	"info": {
+		"_postman_id": "cpaflow-ai-conversion-review-collection",
+		"name": "CPAFlow AI — Conversion Review Workflow",
+		"description": "E2E collection for Conversion Review Workflow: approve/reject conversions with idempotency, conflict detection, and security.\n\nNo AI calls. No DB reset. No demo data dependency. Uses unique per-run credentials.\n\nRun with: npx newman run <collection> -e postman/CPAFlow-AI-Local.postman_environment.json --ignore-redirects",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [],
+	"item": [
+		{
+			"name": "00 — Health & Setup",
+			"item": [
+				{
+					"name": "Health Check → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Content-Type is JSON', function () { pm.response.to.be.json; });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Unique Credentials",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var ts = Date.now();",
+									"var email = 'cr-review-' + ts + '@example.com';",
+									"var password = 'ReviewPass123!';",
+									"pm.environment.set('cr_email', email);",
+									"pm.environment.set('cr_password', password);",
+									"console.log('Conversion Review affiliate email: ' + email);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "01 — Affiliate Setup",
+			"item": [
+				{
+					"name": "Register Affiliate → 201",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('cr_user_id', res.data.user.id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"CR Review Affiliate\",\n  \"email\": \"{{cr_email}}\",\n  \"password\": \"{{cr_password}}\",\n  \"password_confirmation\": \"{{cr_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Affiliate → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('cr_token', res.token);",
+									"console.log('Affiliate token acquired');"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{cr_email}}\",\n  \"password\": \"{{cr_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Offer → 201",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('cr_offer_id', res.data.offer.id);",
+									"console.log('Offer ID: ' + res.data.offer.id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{cr_token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"CR Review Offer\",\n  \"destination_url\": \"https://cr-review.test/offer\",\n  \"payout\": \"25.00\",\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/offers",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "offers"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Campaign → 201",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('cr_campaign_id', res.data.campaign.id);",
+									"console.log('Campaign ID: ' + res.data.campaign.id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{cr_token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"offer_id\": {{cr_offer_id}},\n  \"name\": \"CR Review Campaign\",\n  \"traffic_source\": \"Google Ads\",\n  \"budget\": \"500.00\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "02 — Record & Verify Conversions",
+			"item": [
+				{
+					"name": "Record Conversion A → 201",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('cr_conversion_a_id', res.data.conversion.id);",
+									"pm.test('conversion A is pending', function () { pm.expect(res.data.conversion.status).to.equal('pending'); });",
+									"pm.environment.set('cr_conversion_a_revenue', res.data.conversion.revenue);",
+									"console.log('Conversion A ID: ' + res.data.conversion.id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{cr_token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"external_id\": \"cr-txn-a-{{cr_campaign_id}}-{{cr_user_id}}\",\n  \"source\": \"review-e2e\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{cr_campaign_id}}/conversions",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{cr_campaign_id}}", "conversions"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Record Conversion B → 201",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('cr_conversion_b_id', res.data.conversion.id);",
+									"pm.test('conversion B is pending', function () { pm.expect(res.data.conversion.status).to.equal('pending'); });",
+									"console.log('Conversion B ID: ' + res.data.conversion.id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{cr_token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"external_id\": \"cr-txn-b-{{cr_campaign_id}}-{{cr_user_id}}\",\n  \"source\": \"review-e2e\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{cr_campaign_id}}/conversions",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{cr_campaign_id}}", "conversions"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Dashboard Before Review → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.environment.set('cr_revenue_before', res.data.statistics.revenue);",
+									"pm.environment.set('cr_profit_before', res.data.statistics.profit);",
+									"console.log('Revenue before: ' + res.data.statistics.revenue);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{cr_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "03 — Approve Flow",
+			"item": [
+				{
+					"name": "Approve Conversion A → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.test('conversion A is approved', function () { pm.expect(res.data.conversion.status).to.equal('approved'); });",
+									"pm.test('revenue preserved', function () { pm.expect(res.data.conversion.revenue).to.equal(pm.environment.get('cr_conversion_a_revenue')); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{cr_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{cr_campaign_id}}/conversions/{{cr_conversion_a_id}}/approve",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{cr_campaign_id}}", "conversions", "{{cr_conversion_a_id}}", "approve"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Retry Approve (Idempotent) → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.test('still approved', function () { pm.expect(res.data.conversion.status).to.equal('approved'); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{cr_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{cr_campaign_id}}/conversions/{{cr_conversion_a_id}}/approve",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{cr_campaign_id}}", "conversions", "{{cr_conversion_a_id}}", "approve"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Approved Conversion A → 409",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 409', function () { pm.response.to.have.status(409); });",
+									"var res = pm.response.json();",
+									"pm.test('has conflict message', function () { pm.expect(res.message).to.include('not allowed'); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{cr_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{cr_campaign_id}}/conversions/{{cr_conversion_a_id}}/reject",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{cr_campaign_id}}", "conversions", "{{cr_conversion_a_id}}", "reject"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Dashboard After Approval → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"var revenueBefore = parseFloat(pm.environment.get('cr_revenue_before'));",
+									"var revenueAfter = parseFloat(res.data.statistics.revenue);",
+									"var convRevenue = parseFloat(pm.environment.get('cr_conversion_a_revenue'));",
+									"pm.test('revenue increased by conversion revenue', function () {",
+									"  pm.expect(revenueAfter).to.be.closeTo(revenueBefore + convRevenue, 0.01);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{cr_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/dashboard/statistics",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "dashboard", "statistics"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "04 — Reject Flow",
+			"item": [
+				{
+					"name": "Reject Conversion B → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.test('conversion B is rejected', function () { pm.expect(res.data.conversion.status).to.equal('rejected'); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{cr_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{cr_campaign_id}}/conversions/{{cr_conversion_b_id}}/reject",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{cr_campaign_id}}", "conversions", "{{cr_conversion_b_id}}", "reject"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Retry Reject (Idempotent) → 200",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+									"var res = pm.response.json();",
+									"pm.test('still rejected', function () { pm.expect(res.data.conversion.status).to.equal('rejected'); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{cr_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{cr_campaign_id}}/conversions/{{cr_conversion_b_id}}/reject",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{cr_campaign_id}}", "conversions", "{{cr_conversion_b_id}}", "reject"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Rejected Conversion B → 409",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 409', function () { pm.response.to.have.status(409); });",
+									"var res = pm.response.json();",
+									"pm.test('has conflict message', function () { pm.expect(res.message).to.include('not allowed'); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{cr_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{cr_campaign_id}}/conversions/{{cr_conversion_b_id}}/approve",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{cr_campaign_id}}", "conversions", "{{cr_conversion_b_id}}", "approve"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "05 — Security",
+			"item": [
+				{
+					"name": "Guest Approve → 401",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{cr_campaign_id}}/conversions/{{cr_conversion_a_id}}/approve",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{cr_campaign_id}}", "conversions", "{{cr_conversion_a_id}}", "approve"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Guest Reject → 401",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/{{cr_campaign_id}}/conversions/{{cr_conversion_b_id}}/reject",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "{{cr_campaign_id}}", "conversions", "{{cr_conversion_b_id}}", "reject"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Wrong-Parent Approve → 404",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 404', function () { pm.response.to.have.status(404); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{cr_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/999999/conversions/{{cr_conversion_a_id}}/approve",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "999999", "conversions", "{{cr_conversion_a_id}}", "approve"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Wrong-Parent Reject → 404",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('status is 404', function () { pm.response.to.have.status(404); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{cr_token}}" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/campaigns/999999/conversions/{{cr_conversion_b_id}}/reject",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "campaigns", "999999", "conversions", "{{cr_conversion_b_id}}", "reject"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

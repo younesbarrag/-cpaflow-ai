@@ -3,6 +3,7 @@
 use App\Exceptions\CannotGenerateTrackingLink;
 use App\Exceptions\DuplicateConversionException;
 use App\Exceptions\InvalidCampaignTransition;
+use App\Exceptions\InvalidConversionTransition;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->dontReport([
             InvalidCampaignTransition::class,
+            InvalidConversionTransition::class,
         ]);
 
         $exceptions->render(
@@ -38,6 +40,26 @@ return Application::configure(basePath: dirname(__DIR__))
 
                 return response()->json([
                     'message' => 'The campaign transition is not allowed.',
+                    'errors' => [
+                        'status' => [
+                            $exception->getMessage(),
+                        ],
+                    ],
+                ], 409);
+            },
+        );
+
+        $exceptions->render(
+            function (
+                InvalidConversionTransition $exception,
+                Request $request,
+            ): ?JsonResponse {
+                if (! $request->is('api/*')) {
+                    return null;
+                }
+
+                return response()->json([
+                    'message' => 'The conversion transition is not allowed.',
                     'errors' => [
                         'status' => [
                             $exception->getMessage(),

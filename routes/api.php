@@ -88,6 +88,16 @@ Route::prefix('v1')->group(function () {
             [ConversionController::class, 'store']
         )->name('api.v1.campaigns.conversions.store');
 
+        Route::post(
+            '/campaigns/{campaign}/conversions/{conversion}/approve',
+            [ConversionController::class, 'approve']
+        )->name('api.v1.campaigns.conversions.approve');
+
+        Route::post(
+            '/campaigns/{campaign}/conversions/{conversion}/reject',
+            [ConversionController::class, 'reject']
+        )->name('api.v1.campaigns.conversions.reject');
+
         Route::get(
             '/campaigns/{campaign}/expenses',
             [CampaignExpenseController::class, 'index']
