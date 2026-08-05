@@ -944,9 +944,66 @@ Affiliate
 - `DatabaseSeeder` reste inchangé
 - Les dates utilisent des bornes explicites (aujourd'hui, début de mois, il y a 15 jours) pour rester significatif aux frontières de mois
 
-### dette fonctionnelle connue
+### Cycle de vie des conversions (Conversion Review Workflow)
 
-**Approbation/Rejection des conversions** : Aucun endpoint HTTP ne permet actuellement de transitionner une conversion de `Pending` vers `Approved` ou `Rejected`. Les conversions `Approved` dans les données démo sont créées directement en base pour démontrer le comportement du dashboard. Ceci n'est PAS un blocageur KAN-23, mais un **blocageur de release/functional-completteness** du projet. Recommandation : story séparée après KAN-23.
+**Endpoints :**
+- `POST /api/v1/campaigns/{campaign}/conversions/{conversion}/approve`
+- `POST /api/v1/campaigns/{campaign}/conversions/{conversion}/reject`
+
+**Transitions d'état :**
+```
+                    ┌─────────────┐
+                    │   Pending   │
+                    └──────┬──────┘
+                           │
+           ┌───────────────┴───────────────┐
+           │                               │
+           ▼                               ▼
+    ┌──────────────┐                ┌──────────────┐
+    │   Approved   │                │   Rejected   │
+    └──────────────┘                └──────────────┘
+         terminal                        terminal
+```
+
+- `Pending` → `Approved` : 200
+- `Pending` → `Rejected` : 200
+- `Approved` → `Approved` : 200 (idempotent, no-op)
+- `Rejected` → `Rejected` : 200 (idempotent, no-op)
+- `Approved` → `Rejected` : 409 Conflict
+- `Rejected` → `Approved` : 409 Conflict
+
+**Règles :**
+- `Approved` et `Rejected` sont terminaux — pas de réouverture, pas de retour à `Pending`
+- Même état cible = 200 idempotent (aucune écriture supplémentaire)
+- État terminal opposé = 409 Conflict via `InvalidConversionTransition`
+
+**Autorisation :**
+- Owner-based via `CampaignPolicy` (`approveConversion`, `rejectConversion`)
+- Chaîne : `User → Offer → Campaign → Conversion`
+- Admin n'a pas de bypass business-resource
+
+**Sécurité concurrentielle :**
+- `DB::transaction` + `lockForUpdate` sur la ligne Conversion
+- Relecture de l'état persisté dans la transaction (pas de confiance au modèle lié par la route)
+- Aucun `last-write-wins` silencieux
+
+**Revenu :**
+- Le `revenue` de la Conversion est un snapshot créé à l'enregistrement depuis `Offer.payout`
+- L'approbation ne recalcule jamais le revenu
+- Le Dashboard utilise le `revenue` stocké pour les conversions `Approved`
+
+**`converted_at` :**
+- Représente la date de la conversion, pas la date de review
+- L'approbation ne modifie pas `converted_at`
+- Le filtrage periodique utilise `converted_at`, pas `updated_at`
+
+**Dashboard :**
+- `conversion_count` : tous les statuts
+- `revenue` : somme des `Approved` uniquement
+- `profit` : `revenue - expenses`
+- Aucune modification du code Dashboard requise
+
+**Migration :** Aucune — la colonne `status` et les valeurs d'enum existent déjà.
 
 ---
 
