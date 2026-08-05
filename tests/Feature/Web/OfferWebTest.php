@@ -77,7 +77,7 @@ describe('Offer Web — Create', function () {
     test('create form renders', function () {
         $response = $this->actingAs($this->user)->get(route('offers.create'));
         $response->assertOk();
-        $response->assertSee('Create Offer');
+        $response->assertSee('Create offer');
     });
 
     test('offer creation succeeds', function () {
@@ -117,7 +117,7 @@ describe('Offer Web — Edit', function () {
         $response = $this->actingAs($this->user)->get(route('offers.edit', $offer));
         $response->assertOk();
         $response->assertSee('Test Offer');
-        $response->assertSee('Edit Offer');
+        $response->assertSee('Edit offer');
     });
 
     test('offer update succeeds', function () {

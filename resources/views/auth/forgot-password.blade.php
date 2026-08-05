@@ -1,31 +1,43 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __("Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.") }}
+    <div class="text-center mb-6">
+        <h1 class="text-xl font-bold text-gray-900">Forgot your password?</h1>
+        <p class="mt-1 text-sm text-gray-500">Enter your email and we'll send you a link to reset your password.</p>
     </div>
 
-    <!-- Session Status -->
+    {{-- Session Status --}}
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
     <form method="POST" action="{{ route('password.email') }}">
         @csrf
 
-        <!-- Email Address -->
         <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+            <label for="email" class="block text-sm font-medium text-gray-700">
+                Email address
+            </label>
+            <input
+                id="email"
+                name="email"
+                type="email"
+                value="{{ old('email') }}"
+                class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500"
+                required
+                autofocus
+            />
+            @error('email')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
         </div>
 
-        <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Email Password Reset Link') }}
-            </x-primary-button>
+        <div class="mt-6">
+            <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-brand-600 border border-transparent rounded-lg text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:bg-brand-800 transition-colors duration-150">
+                Send reset link
+            </button>
         </div>
     </form>
 
-    <div class="mt-4 text-center">
-        <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500" href="{{ route('login') }}">
-            {{ __('Back to login') }}
+    <p class="mt-6 text-center text-sm text-gray-500">
+        <a href="{{ route('login') }}" class="font-medium text-brand-600 hover:text-brand-700 transition-colors duration-150">
+            Back to sign in
         </a>
-    </div>
+    </p>
 </x-guest-layout>

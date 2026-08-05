@@ -1,3 +1,69 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    /* Page entry animation — opacity only, no transform (avoids stacking context) */
+    .page-enter {
+        animation: page-enter 150ms ease-out;
+    }
+
+    @keyframes page-enter {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+
+        .page-enter {
+            animation: none;
+            opacity: 1;
+        }
+
+        .animate-pulse-dot {
+            animation: none;
+        }
+
+        .animate-fade-in {
+            animation: none;
+            opacity: 1;
+        }
+    }
+}
+
+@layer components {
+    /* Skip to content — visually hidden, visible only on keyboard focus */
+    .skip-link {
+        position: fixed;
+        top: -100%;
+        left: 0;
+        z-index: 100;
+        padding: 0.5rem 1rem;
+        background-color: #4f46e5;
+        color: white;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-radius: 0 0 0.5rem 0;
+        text-decoration: none;
+        transition: top 150ms ease-in-out;
+    }
+
+    .skip-link:focus {
+        top: 0;
+        outline: 2px solid white;
+        outline-offset: 2px;
+    }
+}
