@@ -31,6 +31,24 @@ export default {
             boxShadow: {
                 'card': '0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04)',
                 'card-hover': '0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.06)',
+                'elevated': '0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04)',
+            },
+            borderRadius: {
+                'card': '12px',
+            },
+            keyframes: {
+                'fade-in': {
+                    '0%': { opacity: '0' },
+                    '100%': { opacity: '1' },
+                },
+                'pulse-dot': {
+                    '0%, 100%': { opacity: '1' },
+                    '50%': { opacity: '0.5' },
+                },
+            },
+            animation: {
+                'fade-in': 'fade-in 150ms ease-out both',
+                'pulse-dot': 'pulse-dot 2s ease-in-out infinite',
             },
         },
     },

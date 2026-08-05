@@ -58,7 +58,7 @@ describe('Campaign Web — Create', function () {
 
         $response = $this->actingAs($this->user)->get(route('campaigns.create'));
         $response->assertOk();
-        $response->assertSee('Create Campaign');
+        $response->assertSee('Create campaign');
     });
 
     test('campaign creation succeeds', function () {
@@ -270,7 +270,7 @@ describe('Campaign Web — Navigation', function () {
         $response = $this->actingAs($this->user)->get(route('dashboard'));
         $response->assertOk();
         $response->assertSee('Welcome back');
-        $response->assertSee('Create Offer');
-        $response->assertSee('Create Campaign');
+        $response->assertSee('Create offer');
+        $response->assertSee('Create campaign');
     });
 });

@@ -7,18 +7,17 @@
 
         <title>{{ config('app.name', 'CPAFlow') }}</title>
 
-        <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
 
-        <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased bg-gray-50">
+    <body class="font-sans antialiased bg-gray-50 text-gray-900">
+        <a href="#main-content" class="skip-link">Skip to content</a>
+
         <div class="min-h-screen">
             @include('layouts.navigation')
 
-            <!-- Page Heading -->
             @isset($header)
                 <header class="bg-white border-b border-gray-200">
                     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -27,15 +26,13 @@
                 </header>
             @endisset
 
-            <!-- Flash Messages -->
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
                 <x-flash-message type="success" />
                 <x-flash-message type="error" />
                 <x-flash-message type="warning" />
             </div>
 
-            <!-- Page Content -->
-            <main>
+            <main id="main-content" class="page-enter">
                 {{ $slot }}
             </main>
         </div>

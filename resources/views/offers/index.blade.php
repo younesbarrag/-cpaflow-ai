@@ -1,36 +1,57 @@
 <x-app-layout>
     <div class="py-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <x-page-header title="Offers" description="Manage your CPA offers and destination URLs.">
-                <x-slot:actions>
-                    <a href="{{ route('offers.create') }}" class="inline-flex items-center px-4 py-2 bg-brand-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-brand-700 focus:bg-brand-700 active:bg-brand-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                        <svg class="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        Create Offer
-                    </a>
-                </x-slot:actions>
-            </x-page-header>
 
-            {{-- Filters — only shown when account has offers --}}
+            {{-- Header --}}
+            <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Offers</h1>
+                    <p class="mt-1 text-sm text-gray-500">Manage your CPA offers, payouts and destination URLs.</p>
+                </div>
+                <a href="{{ route('offers.create') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-600 border border-transparent rounded-lg text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:bg-brand-800 transition-colors duration-150">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Create offer
+                </a>
+            </div>
+
+            {{-- Search + Filters (desktop) --}}
             @if ($hasOffers)
                 <form method="GET" action="{{ route('offers.index') }}" class="mb-6">
-                    <div class="flex flex-col sm:flex-row gap-3">
+                    <div class="hidden sm:flex items-center gap-3">
                         <div class="flex-1">
                             <x-search-input name="search" value="{{ request('search') }}" placeholder="Search offers by name..." />
                         </div>
-                        <div class="sm:w-48">
-                            <select name="status" class="block w-full border-gray-300 focus:border-brand-500 focus:ring-brand-500 rounded-md shadow-sm text-sm">
-                                <option value="all" {{ request('status', 'all') === 'all' ? 'selected' : '' }}>All Statuses</option>
+                        <div class="w-44">
+                            <select name="status" class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                                <option value="all" {{ request('status', 'all') === 'all' ? 'selected' : '' }}>All statuses</option>
                                 <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
                                 <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
                                 <option value="suspended" {{ request('status') === 'suspended' ? 'selected' : '' }}>Suspended</option>
                                 <option value="archived" {{ request('status') === 'archived' ? 'selected' : '' }}>Archived</option>
                             </select>
                         </div>
-                        <button type="submit" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition ease-in-out duration-150">
+                        <button type="submit" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors duration-150">
                             Filter
                         </button>
+                    </div>
+
+                    {{-- Search + Filters (mobile) --}}
+                    <div class="sm:hidden space-y-3">
+                        <x-search-input name="search" value="{{ request('search') }}" placeholder="Search offers by name..." />
+                        <div class="flex gap-3">
+                            <select name="status" class="flex-1 rounded-lg border-gray-300 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                                <option value="all" {{ request('status', 'all') === 'all' ? 'selected' : '' }}>All statuses</option>
+                                <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
+                                <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
+                                <option value="suspended" {{ request('status') === 'suspended' ? 'selected' : '' }}>Suspended</option>
+                                <option value="archived" {{ request('status') === 'archived' ? 'selected' : '' }}>Archived</option>
+                            </select>
+                            <button type="submit" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors duration-150">
+                                Filter
+                            </button>
+                        </div>
                     </div>
                 </form>
             @endif
@@ -38,24 +59,36 @@
             {{-- Empty States --}}
             @if ($offers->isEmpty())
                 @if (! $hasOffers)
-                    {{-- First-use state: zero offers in account --}}
-                    <div class="bg-white rounded-lg shadow-card p-8 text-center">
-                        <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                        </svg>
-                        <h3 class="mt-3 text-sm font-semibold text-gray-900">No offers yet</h3>
-                        <p class="mt-1 text-sm text-gray-500">Create your first CPA offer to start building campaigns and tracking links.</p>
+                    {{-- True empty state: no offers at all --}}
+                    <div class="bg-white rounded-card shadow-card border border-gray-200 p-8 text-center">
+                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-50">
+                            <svg class="h-7 w-7 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                            </svg>
+                        </div>
+                        <h3 class="mt-4 text-base font-semibold text-gray-900">No offers yet</h3>
+                        <p class="mt-2 text-sm text-gray-500 max-w-sm mx-auto">Create your first CPA offer to define a destination URL and payout before launching a campaign.</p>
+                        <div class="mt-6">
+                            <a href="{{ route('offers.create') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 border border-transparent rounded-lg text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors duration-150">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                                Create your first offer
+                            </a>
+                        </div>
                     </div>
                 @else
-                    {{-- Filtered-empty state: filters returned zero results --}}
-                    <div class="bg-white rounded-lg shadow-card p-8 text-center">
-                        <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <h3 class="mt-3 text-sm font-semibold text-gray-900">No offers match your filters</h3>
-                        <p class="mt-1 text-sm text-gray-500">Try adjusting your search or status filter.</p>
-                        <div class="mt-4">
-                            <a href="{{ route('offers.index') }}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                    {{-- Filtered-zero state: offers exist but search/filter returned nothing --}}
+                    <div class="bg-white rounded-card shadow-card border border-gray-200 p-8 text-center">
+                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
+                            <svg class="h-7 w-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                            </svg>
+                        </div>
+                        <h3 class="mt-4 text-base font-semibold text-gray-900">No offers found</h3>
+                        <p class="mt-2 text-sm text-gray-500 max-w-sm mx-auto">Try changing your search or status filter.</p>
+                        <div class="mt-6">
+                            <a href="{{ route('offers.index') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors duration-150">
                                 Clear filters
                             </a>
                         </div>
@@ -63,44 +96,49 @@
                 @endif
             @else
                 {{-- Desktop Table --}}
-                <div class="hidden sm:block bg-white rounded-lg shadow-card overflow-hidden">
+                <div class="hidden sm:block bg-white rounded-card shadow-card border border-gray-200 overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destination</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payout</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <thead>
+                                <tr class="border-b border-gray-200 bg-gray-50">
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Destination</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Payout</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-100">
+                            <tbody class="divide-y divide-gray-100">
                                 @foreach ($offers as $offer)
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {{ $offer->name }}
+                                    <tr class="hover:bg-gray-50 transition-colors duration-100">
+                                        <td class="px-6 py-3">
+                                            <span class="text-sm font-medium text-gray-900">{{ $offer->name }}</span>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">
-                                            {{ parse_url($offer->destination_url, PHP_URL_HOST) ?? $offer->destination_url }}
+                                        <td class="px-6 py-3">
+                                            <span class="text-sm text-gray-500 max-w-xs truncate block" title="{{ $offer->destination_url }}">{{ parse_url($offer->destination_url, PHP_URL_HOST) ?? $offer->destination_url }}</span>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-700">
-                                            ${{ number_format((float) $offer->payout, 2) }}
+                                        <td class="px-6 py-3">
+                                            <span class="text-sm font-semibold text-emerald-700">${{ number_format((float) $offer->payout, 2) }}</span>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-6 py-3">
                                             <x-status-badge :status="$offer->status->value" />
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <div class="flex items-center justify-end gap-2">
-                                                <a href="{{ route('offers.edit', $offer) }}" class="text-brand-600 hover:text-brand-900 font-medium">
+                                        <td class="px-6 py-3 text-right">
+                                            <div class="flex items-center justify-end gap-1">
+                                                <a href="{{ route('offers.edit', $offer) }}" class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-150">
+                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                                    </svg>
                                                     Edit
                                                 </a>
                                                 @if ($offer->status->value !== 'archived')
                                                     <x-confirm-button
                                                         action="{{ route('offers.archive', $offer) }}"
-                                                        confirmMessage="Are you sure you want to archive this offer?"
+                                                        confirmMessage="This offer will no longer be available for new campaign activity."
                                                         label="Archive"
-                                                        class="text-red-600 hover:text-red-900 font-medium bg-transparent border-0 p-0 cursor-pointer"
+                                                        modalTitle="Archive offer?"
+                                                        confirmLabel="Archive offer"
+                                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-150"
                                                     />
                                                 @endif
                                             </div>
@@ -113,24 +151,28 @@
                 </div>
 
                 {{-- Mobile Cards --}}
-                <div class="sm:hidden space-y-4">
+                <div class="sm:hidden space-y-3">
                     @foreach ($offers as $offer)
-                        <div class="bg-white rounded-lg shadow-card p-4">
-                            <div class="flex items-center justify-between mb-2">
+                        <div class="bg-white rounded-card shadow-card border border-gray-200 p-4">
+                            <div class="flex items-start justify-between gap-3 mb-2">
                                 <h3 class="text-sm font-semibold text-gray-900">{{ $offer->name }}</h3>
                                 <x-status-badge :status="$offer->status->value" />
                             </div>
-                            <p class="text-xs text-gray-500 mb-3 truncate">{{ parse_url($offer->destination_url, PHP_URL_HOST) ?? $offer->destination_url }}</p>
+                            <p class="text-xs text-gray-500 mb-3 truncate" title="{{ $offer->destination_url }}">{{ parse_url($offer->destination_url, PHP_URL_HOST) ?? $offer->destination_url }}</p>
                             <div class="flex items-center justify-between">
                                 <span class="text-sm font-semibold text-emerald-700">${{ number_format((float) $offer->payout, 2) }}</span>
-                                <div class="flex items-center gap-2">
-                                    <a href="{{ route('offers.edit', $offer) }}" class="text-sm text-brand-600 hover:text-brand-900 font-medium">Edit</a>
+                                <div class="flex items-center gap-1">
+                                    <a href="{{ route('offers.edit', $offer) }}" class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-150">
+                                        Edit
+                                    </a>
                                     @if ($offer->status->value !== 'archived')
                                         <x-confirm-button
                                             action="{{ route('offers.archive', $offer) }}"
-                                            confirmMessage="Are you sure you want to archive this offer?"
+                                            confirmMessage="This offer will no longer be available for new campaign activity."
                                             label="Archive"
-                                            class="text-sm text-red-600 hover:text-red-900 font-medium bg-transparent border-0 p-0 cursor-pointer"
+                                            modalTitle="Archive offer?"
+                                            confirmLabel="Archive offer"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-150"
                                         />
                                     @endif
                                 </div>
@@ -140,10 +182,16 @@
                 </div>
 
                 {{-- Pagination --}}
-                <div class="mt-6">
-                    {{ $offers->links() }}
-                </div>
+                @if ($offers->hasPages())
+                    <div class="mt-6 flex items-center justify-between">
+                        <p class="text-sm text-gray-500">
+                            Showing {{ $offers->firstItem() }}–{{ $offers->lastItem() }} of {{ $offers->total() }} offers
+                        </p>
+                        <div>{{ $offers->links() }}</div>
+                    </div>
+                @endif
             @endif
+
         </div>
     </div>
 </x-app-layout>
