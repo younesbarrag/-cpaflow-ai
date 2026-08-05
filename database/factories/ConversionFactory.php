@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Enums\CampaignStatus;
 use App\Enums\ConversionStatus;
 use App\Models\Campaign;
 use App\Models\Conversion;
@@ -17,18 +16,24 @@ final class ConversionFactory extends Factory
 
     public function definition(): array
     {
-        $campaign = Campaign::factory()->create([
-            'status' => CampaignStatus::Active,
-        ]);
-
         return [
-            'campaign_id' => $campaign->id,
+            'campaign_id' => Campaign::factory()->active(),
             'external_id' => fake()->uuid(),
             'source' => fake()->optional(0.5)->word(),
-            'revenue' => $campaign->offer->payout,
+            'revenue' => '25.00',
             'status' => ConversionStatus::Pending,
             'converted_at' => now(),
         ];
+    }
+
+    public function approved(): static
+    {
+        return $this->state(['status' => ConversionStatus::Approved]);
+    }
+
+    public function rejected(): static
+    {
+        return $this->state(['status' => ConversionStatus::Rejected]);
     }
 
     public function forCampaign(Campaign $campaign): static

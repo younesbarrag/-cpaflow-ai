@@ -19,7 +19,7 @@ class OfferFactory extends Factory
             'name' => fake()->words(3, true),
             'destination_url' => 'https://'.fake()->domainName().'/'.fake()->uuid(),
             'payout' => number_format(fake()->randomFloat(2, 0, 500), 2, '.', ''),
-            'status' => fake()->randomElement(OfferStatus::cases()),
+            'status' => OfferStatus::Draft,
             'description' => fake()->optional(0.6)->sentence(),
         ];
     }
@@ -32,6 +32,16 @@ class OfferFactory extends Factory
     public function active(): static
     {
         return $this->state(['status' => OfferStatus::Active]);
+    }
+
+    public function suspended(): static
+    {
+        return $this->state(['status' => OfferStatus::Suspended]);
+    }
+
+    public function archived(): static
+    {
+        return $this->state(['status' => OfferStatus::Archived]);
     }
 
     public function forUser(User $user): static

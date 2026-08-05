@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Enums\CampaignStatus;
 use App\Models\Campaign;
 use App\Models\CampaignExpense;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -16,12 +15,8 @@ final class CampaignExpenseFactory extends Factory
 
     public function definition(): array
     {
-        $campaign = Campaign::factory()->create([
-            'status' => CampaignStatus::Active,
-        ]);
-
         return [
-            'campaign_id' => $campaign->id,
+            'campaign_id' => Campaign::factory()->active(),
             'amount' => $this->generateAmount(),
             'spent_at' => fake()->dateTimeBetween('-30 days', 'now'),
             'description' => fake()->optional(0.6)->sentence(),
