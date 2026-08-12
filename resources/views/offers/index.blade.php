@@ -16,43 +16,24 @@
                 </a>
             </div>
 
-            {{-- Search + Filters (desktop) --}}
+            {{-- Search + Filters --}}
             @if ($hasOffers)
-                <form method="GET" action="{{ route('offers.index') }}" class="mb-6">
-                    <div class="hidden sm:flex items-center gap-3">
-                        <div class="flex-1">
-                            <x-search-input name="search" value="{{ request('search') }}" placeholder="Search offers by name..." />
-                        </div>
-                        <div class="w-44">
-                            <select name="status" class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
-                                <option value="all" {{ request('status', 'all') === 'all' ? 'selected' : '' }}>All statuses</option>
-                                <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
-                                <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
-                                <option value="suspended" {{ request('status') === 'suspended' ? 'selected' : '' }}>Suspended</option>
-                                <option value="archived" {{ request('status') === 'archived' ? 'selected' : '' }}>Archived</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors duration-150">
-                            Filter
-                        </button>
-                    </div>
-
-                    {{-- Search + Filters (mobile) --}}
-                    <div class="sm:hidden space-y-3">
+                <form method="GET" action="{{ route('offers.index') }}" class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_11rem_auto] sm:items-center">
+                    <div class="min-w-0">
                         <x-search-input name="search" value="{{ request('search') }}" placeholder="Search offers by name..." />
-                        <div class="flex gap-3">
-                            <select name="status" class="flex-1 rounded-lg border-gray-300 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
-                                <option value="all" {{ request('status', 'all') === 'all' ? 'selected' : '' }}>All statuses</option>
-                                <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
-                                <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
-                                <option value="suspended" {{ request('status') === 'suspended' ? 'selected' : '' }}>Suspended</option>
-                                <option value="archived" {{ request('status') === 'archived' ? 'selected' : '' }}>Archived</option>
-                            </select>
-                            <button type="submit" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors duration-150">
-                                Filter
-                            </button>
-                        </div>
                     </div>
+                    <div>
+                        <select name="status" class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500">
+                            <option value="all" {{ request('status', 'all') === 'all' ? 'selected' : '' }}>All statuses</option>
+                            <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
+                            <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
+                            <option value="suspended" {{ request('status') === 'suspended' ? 'selected' : '' }}>Suspended</option>
+                            <option value="archived" {{ request('status') === 'archived' ? 'selected' : '' }}>Archived</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="whitespace-nowrap px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors duration-150">
+                        Filter
+                    </button>
                 </form>
             @endif
 
@@ -140,6 +121,15 @@
                                                         confirmLabel="Archive offer"
                                                         class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-150"
                                                     />
+                                                @else
+                                                    <x-confirm-button
+                                                        action="{{ route('offers.restore', $offer) }}"
+                                                        confirmMessage="This offer will be restored to Draft status."
+                                                        label="Restore"
+                                                        modalTitle="Restore offer?"
+                                                        confirmLabel="Restore offer"
+                                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors duration-150"
+                                                    />
                                                 @endif
                                             </div>
                                         </td>
@@ -173,6 +163,15 @@
                                             modalTitle="Archive offer?"
                                             confirmLabel="Archive offer"
                                             class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-150"
+                                        />
+                                    @else
+                                        <x-confirm-button
+                                            action="{{ route('offers.restore', $offer) }}"
+                                            confirmMessage="This offer will be restored to Draft status."
+                                            label="Restore"
+                                            modalTitle="Restore offer?"
+                                            confirmLabel="Restore offer"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors duration-150"
                                         />
                                     @endif
                                 </div>

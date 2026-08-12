@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Offer\ArchiveOfferAction;
 use App\Actions\Offer\CreateOfferAction;
+use App\Actions\Offer\RestoreOfferAction;
 use App\Actions\Offer\UpdateOfferAction;
 use App\Enums\OfferStatus;
 use App\Http\Requests\Api\V1\Offer\StoreOfferRequest;
@@ -89,5 +90,15 @@ class OfferController extends Controller
 
         return redirect()->route('offers.index')
             ->with('success', 'Offer archived successfully.');
+    }
+
+    public function restore(Offer $offer, RestoreOfferAction $action): RedirectResponse
+    {
+        abort_unless($offer->user_id === auth()->id(), 403);
+
+        $action->execute($offer);
+
+        return redirect()->route('offers.index')
+            ->with('success', 'Offer restored successfully.');
     }
 }

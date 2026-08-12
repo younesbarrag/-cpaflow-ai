@@ -71,6 +71,50 @@ describe('Offer Web — Index', function () {
         $response->assertSee('Active Offer');
         $response->assertDontSee('Draft Offer');
     });
+
+    test('search and status filter work together', function () {
+        Offer::factory()->for($this->user)->active()->create(['name' => 'Fitness Offer']);
+        Offer::factory()->for($this->user)->active()->create(['name' => 'Gaming Offer']);
+        Offer::factory()->for($this->user)->draft()->create(['name' => 'Fitness Draft']);
+
+        $response = $this->actingAs($this->user)->get(route('offers.index', [
+            'search' => 'Fitness',
+            'status' => 'active',
+        ]));
+        $response->assertOk();
+        $response->assertSee('Fitness Offer');
+        $response->assertDontSee('Gaming Offer');
+        $response->assertDontSee('Fitness Draft');
+    });
+
+    test('search with no matching results shows filtered empty state', function () {
+        Offer::factory()->for($this->user)->create(['name' => 'Real Offer']);
+
+        $response = $this->actingAs($this->user)->get(route('offers.index', ['search' => 'Nonexistent']));
+        $response->assertOk();
+        $response->assertSee('No offers found');
+        $response->assertDontSee('No offers yet');
+    });
+
+    test('all status option shows all non-archived offers', function () {
+        Offer::factory()->for($this->user)->draft()->create(['name' => 'Draft One']);
+        Offer::factory()->for($this->user)->active()->create(['name' => 'Active One']);
+
+        $response = $this->actingAs($this->user)->get(route('offers.index', ['status' => 'all']));
+        $response->assertOk();
+        $response->assertSee('Draft One');
+        $response->assertSee('Active One');
+    });
+
+    test('filter parameters are preserved in pagination links', function () {
+        Offer::factory()->for($this->user)->active()->create(['name' => 'Page Offer']);
+
+        $response = $this->actingAs($this->user)->get(route('offers.index', [
+            'search' => 'Page',
+            'status' => 'active',
+        ]));
+        $response->assertOk();
+    });
 });
 
 describe('Offer Web — Create', function () {
@@ -168,6 +212,77 @@ describe('Offer Web — Archive', function () {
 
         $response = $this->actingAs($this->user)->post(route('offers.archive', $offer));
         $response->assertStatus(403);
+    });
+});
+
+describe('Offer Web — Restore', function () {
+    test('archived offer can be restored', function () {
+        $offer = Offer::factory()->for($this->user)->state(['status' => OfferStatus::Archived])->create();
+
+        $response = $this->actingAs($this->user)->post(route('offers.restore', $offer));
+        $response->assertRedirect(route('offers.index'));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('offers', [
+            'id' => $offer->id,
+            'status' => OfferStatus::Draft->value,
+        ]);
+    });
+
+    test('foreign offer cannot be restored', function () {
+        $otherUser = User::factory()->create();
+        $offer = Offer::factory()->for($otherUser)->state(['status' => OfferStatus::Archived])->create();
+
+        $response = $this->actingAs($this->user)->post(route('offers.restore', $offer));
+        $response->assertStatus(403);
+    });
+
+    test('restore action appears for archived offer on index', function () {
+        Offer::factory()->for($this->user)->state(['status' => OfferStatus::Archived])->create(['name' => 'Archived Offer']);
+
+        $response = $this->actingAs($this->user)->get(route('offers.index'));
+        $response->assertOk();
+        $response->assertSee('Restore');
+        $response->assertDontSee('Archive offer');
+    });
+
+    test('restore action does not appear for non-archived offer', function () {
+        $offer = Offer::factory()->for($this->user)->draft()->create(['name' => 'Draft Offer']);
+
+        $response = $this->actingAs($this->user)->get(route('offers.index'));
+        $response->assertOk();
+        $response->assertDontSee('/restore');
+        $response->assertSee('Archive');
+    });
+});
+
+describe('Offer Web — Filter Form Markup', function () {
+    test('filter form contains exactly one search input and one status select', function () {
+        Offer::factory()->for($this->user)->create(['name' => 'Test Offer']);
+
+        $response = $this->actingAs($this->user)->get(route('offers.index'));
+        $response->assertOk();
+
+        $html = $response->content();
+
+        $searchCount = preg_match_all('/name="search"/', $html);
+        $statusCount = preg_match_all('/name="status"/', $html);
+
+        $this->assertSame(1, $searchCount, 'Expected exactly one name="search" input, found '.$searchCount);
+        $this->assertSame(1, $statusCount, 'Expected exactly one name="status" select, found '.$statusCount);
+    });
+
+    test('filter form does not duplicate controls when no offers exist', function () {
+        $response = $this->actingAs($this->user)->get(route('offers.index'));
+        $response->assertOk();
+
+        $html = $response->content();
+
+        $searchCount = preg_match_all('/name="search"/', $html);
+        $statusCount = preg_match_all('/name="status"/', $html);
+
+        $this->assertSame(0, $searchCount, 'Expected zero name="search" inputs when no offers exist, found '.$searchCount);
+        $this->assertSame(0, $statusCount, 'Expected zero name="status" selects when no offers exist, found '.$statusCount);
     });
 });
 

@@ -30,6 +30,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/offers/{offer}/edit', [OfferController::class, 'edit'])->name('offers.edit');
     Route::patch('/offers/{offer}', [OfferController::class, 'update'])->name('offers.update');
     Route::post('/offers/{offer}/archive', [OfferController::class, 'archive'])->name('offers.archive');
+    Route::post('/offers/{offer}/restore', [OfferController::class, 'restore'])->name('offers.restore');
 
     // Campaigns
     Route::get('/campaigns', [CampaignController::class, 'index'])->name('campaigns.index');
