@@ -56,12 +56,18 @@ class AnalyzeOfferJob implements ShouldBeUnique, ShouldQueue
     ): void {
         $analysis = AiAnalysis::find($this->analysisId);
 
-        if ($analysis === null || $analysis->status !== AiProcessStatus::Pending) {
+        if ($analysis === null) {
             return;
         }
 
-        $analysis->update(['status' => AiProcessStatus::Processing]);
-        $analysis->refresh();
+        if ($analysis->status === AiProcessStatus::Completed || $analysis->status === AiProcessStatus::Failed) {
+            return;
+        }
+
+        if ($analysis->status === AiProcessStatus::Pending) {
+            $analysis->update(['status' => AiProcessStatus::Processing]);
+            $analysis->refresh();
+        }
 
         $offer = $analysis->offer;
 
@@ -81,6 +87,7 @@ class AnalyzeOfferJob implements ShouldBeUnique, ShouldQueue
                 'analysis_id' => $analysis->id,
                 'offer_id' => $offer->id,
                 'category' => get_class($e),
+                'message' => $e->getMessage(),
             ]);
 
             throw $e;
@@ -89,6 +96,7 @@ class AnalyzeOfferJob implements ShouldBeUnique, ShouldQueue
                 'analysis_id' => $analysis->id,
                 'offer_id' => $offer->id,
                 'category' => get_class($e),
+                'message' => $e->getMessage(),
             ]);
 
             $this->failAnalysis($analysis, "L'analyse IA n'a pas pu être terminée. Veuillez réessayer.");
@@ -99,6 +107,7 @@ class AnalyzeOfferJob implements ShouldBeUnique, ShouldQueue
                 'analysis_id' => $analysis->id,
                 'offer_id' => $offer->id,
                 'category' => get_class($e),
+                'message' => $e->getMessage(),
             ]);
 
             $this->failAnalysis($analysis, "L'analyse IA n'a pas pu être terminée. Veuillez réessayer.");
@@ -122,6 +131,7 @@ class AnalyzeOfferJob implements ShouldBeUnique, ShouldQueue
         Log::warning('AI analysis job failed permanently', [
             'analysis_id' => $analysis->id,
             'offer_id' => $analysis->offer_id,
+            'message' => $exception->getMessage(),
         ]);
     }
 

@@ -16,7 +16,18 @@
     };
 @endphp
 
-<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium {{ $config['bg'] }} {{ $config['text'] }}">
+<span {{ $attributes->class([
+    'inline-flex',
+    'items-center',
+    'gap-1.5',
+    'px-2.5',
+    'py-0.5',
+    'rounded-full',
+    'text-xs',
+    'font-medium',
+    $config['bg'],
+    $config['text'],
+]) }}>
     <span class="w-1.5 h-1.5 rounded-full {{ $config['dot'] }} {{ $config['pulse'] ? 'animate-pulse-dot' : '' }}"></span>
     {{ ucfirst($status) }}
 </span>

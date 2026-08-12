@@ -108,6 +108,7 @@ class GenerateContentJob implements ShouldBeUnique, ShouldQueue
                 'generation_id' => $generation->id,
                 'offer_id' => $offer->id,
                 'category' => get_class($e),
+                'message' => $e->getMessage(),
             ]);
 
             throw $e;
@@ -116,6 +117,7 @@ class GenerateContentJob implements ShouldBeUnique, ShouldQueue
                 'generation_id' => $generation->id,
                 'offer_id' => $offer->id,
                 'category' => get_class($e),
+                'message' => $e->getMessage(),
             ]);
 
             $this->failGeneration($generation, "La génération de contenu n'a pas pu être terminée. Veuillez réessayer.");
@@ -126,6 +128,7 @@ class GenerateContentJob implements ShouldBeUnique, ShouldQueue
                 'generation_id' => $generation->id,
                 'offer_id' => $offer->id,
                 'category' => get_class($e),
+                'message' => $e->getMessage(),
             ]);
 
             $this->failGeneration($generation, "La génération de contenu n'a pas pu être terminée. Veuillez réessayer.");
@@ -149,6 +152,7 @@ class GenerateContentJob implements ShouldBeUnique, ShouldQueue
         Log::warning('AI generation job failed permanently', [
             'generation_id' => $generation->id,
             'offer_id' => $generation->offer_id,
+            'message' => $exception->getMessage(),
         ]);
     }
 
