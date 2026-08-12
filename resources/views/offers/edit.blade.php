@@ -76,6 +76,14 @@
                         </div>
                     </div>
 
+                    {{-- Analysis Error --}}
+                    <div x-show="analysisError" class="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+                        <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                        </svg>
+                        <p class="text-sm text-red-600" x-text="analysisError"></p>
+                    </div>
+
                     {{-- Analysis Failed --}}
                     <div x-show="analysis && analysis.status === 'failed'" class="space-y-3">
                         <div class="flex items-center gap-2">
@@ -207,6 +215,14 @@
                         <p class="text-sm text-red-600">Content generation failed. Retry or re-analyze the offer.</p>
                     </div>
 
+                    {{-- Generation Error --}}
+                    <div x-show="generationError" class="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+                        <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                        </svg>
+                        <p class="text-sm text-red-600" x-text="generationError"></p>
+                    </div>
+
                     {{-- Generation Processing --}}
                     <div x-show="generating && ! generationFailed" class="space-y-3 mb-4">
                         <div class="flex items-center gap-3">
@@ -299,10 +315,12 @@
                 csrfToken: document.querySelector('meta[name="csrf-token"]').content,
 
                 analysis: null,
+                analysisError: null,
                 analyzing: false,
                 analysisPollTimer: null,
 
                 generations: [],
+                generationError: null,
                 generating: false,
                 generationFailed: false,
                 generationPollTimer: null,
@@ -334,6 +352,7 @@
 
                 async loadAnalysis() {
                     try {
+                        this.analysisError = null;
                         const r = await fetch(`/api/v1/offers/${this.offerId}/analysis`, {
                             headers: this.apiHeaders(),
                         });
@@ -343,14 +362,21 @@
                             if (this.analysis.status === 'pending' || this.analysis.status === 'processing') {
                                 this.startAnalysisPolling();
                             }
+                        } else if (r.status !== 404) {
+                            this.analysisError = 'Unable to load analysis.';
+                            console.error('loadAnalysis failed', r.status);
                         }
-                    } catch (_) {}
+                    } catch (e) {
+                        this.analysisError = 'Unable to load analysis.';
+                        console.error('loadAnalysis error', e);
+                    }
                 },
 
                 async triggerAnalysis() {
                     if (this.analyzing) return;
                     this.analyzing = true;
                     this.generationFailed = false;
+                    this.analysisError = null;
 
                     try {
                         const r = await fetch(`/api/v1/offers/${this.offerId}/analyze`, {
@@ -372,8 +398,14 @@
                             } else {
                                 await this.loadAnalysis();
                             }
+                        } else {
+                            this.analysisError = 'Unable to start AI analysis. Please try again.';
+                            console.error('triggerAnalysis failed', r.status, json);
                         }
-                    } catch (_) {} finally {
+                    } catch (e) {
+                        this.analysisError = 'Unable to start AI analysis. Please try again.';
+                        console.error('triggerAnalysis error', e);
+                    } finally {
                         this.analyzing = false;
                     }
                 },
@@ -396,6 +428,7 @@
 
                 async loadGenerations() {
                     try {
+                        this.generationError = null;
                         const r = await fetch(`/api/v1/offers/${this.offerId}/generations`, {
                             headers: this.apiHeaders(),
                         });
@@ -404,14 +437,21 @@
                             this.generations = json.data || [];
                             const hasPending = this.generations.some(g => g.status === 'pending' || g.status === 'processing');
                             if (hasPending) this.startGenerationPolling();
+                        } else if (r.status !== 404) {
+                            this.generationError = 'Unable to load generations.';
+                            console.error('loadGenerations failed', r.status);
                         }
-                    } catch (_) {}
+                    } catch (e) {
+                        this.generationError = 'Unable to load generations.';
+                        console.error('loadGenerations error', e);
+                    }
                 },
 
                 async triggerGeneration() {
                     if (this.generating || !this.canGenerate) return;
                     this.generating = true;
                     this.generationFailed = false;
+                    this.generationError = null;
 
                     try {
                         const r = await fetch(`/api/v1/offers/${this.offerId}/generate`, {
@@ -424,9 +464,13 @@
                             this.startGenerationPolling();
                         } else if (r.status === 422) {
                             this.generationFailed = true;
+                        } else {
+                            this.generationError = 'Unable to start content generation. Please try again.';
+                            console.error('triggerGeneration failed', r.status);
                         }
-                    } catch (_) {
-                        this.generationFailed = true;
+                    } catch (e) {
+                        this.generationError = 'Unable to start content generation. Please try again.';
+                        console.error('triggerGeneration error', e);
                     } finally {
                         this.generating = false;
                     }

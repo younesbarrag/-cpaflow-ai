@@ -76,8 +76,15 @@ PROMPT;
 
         $data = $response->structured;
 
-        if (! is_array($data)) {
-            throw new \RuntimeException('Structured response is not an array.');
+        if (! is_array($data) || $data === []) {
+            throw new \UnexpectedValueException('Structured response is empty or not an array.');
+        }
+
+        $requiredKeys = ['hooks', 'captions'];
+        $missingKeys = array_diff($requiredKeys, array_keys($data));
+
+        if ($missingKeys !== []) {
+            throw new \UnexpectedValueException('Structured response missing required keys: '.implode(', ', $missingKeys));
         }
 
         return [

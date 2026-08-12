@@ -635,6 +635,84 @@ describe('Failures', function () {
     });
 });
 
+describe('Retry Semantics', function () {
+    test('processing row allows job execution instead of returning early', function () {
+        $offer = Offer::factory()->forUser($this->user)->create();
+        $analysis = AiAnalysis::factory()->processing()->forOffer($offer)->create();
+
+        $fakeResponse = StructuredResponseFake::make()->withStructured([
+            'score' => 70,
+            'summary' => 'Offre correcte.',
+            'strengths' => ['Bon payout'],
+            'weaknesses' => [],
+            'recommendations' => [],
+        ]);
+
+        Prism::fake([$fakeResponse]);
+
+        AnalyzeOfferJob::dispatchSync($analysis->id);
+
+        $analysis->refresh();
+
+        expect($analysis->status->value)->toBe('completed')
+            ->and($analysis->score)->toBe(70);
+    });
+
+    test('pending row transitions to processing then completed', function () {
+        $offer = Offer::factory()->forUser($this->user)->create();
+        $analysis = AiAnalysis::factory()->pending()->forOffer($offer)->create();
+
+        $fakeResponse = StructuredResponseFake::make()->withStructured([
+            'score' => 90,
+            'summary' => 'Excellente offre.',
+            'strengths' => ['Payout élevé'],
+            'weaknesses' => [],
+            'recommendations' => [],
+        ]);
+
+        Prism::fake([$fakeResponse]);
+
+        AnalyzeOfferJob::dispatchSync($analysis->id);
+
+        $analysis->refresh();
+
+        expect($analysis->status->value)->toBe('completed')
+            ->and($analysis->score)->toBe(90)
+            ->and($analysis->summary)->toBe('Excellente offre.');
+    });
+
+    test('completed analysis is not reprocessed', function () {
+        $offer = Offer::factory()->forUser($this->user)->create();
+        $analysis = AiAnalysis::factory()->completed()->forOffer($offer)->create([
+            'score' => 50,
+            'summary' => 'Déjà analysée.',
+        ]);
+
+        $fake = Prism::fake([]);
+
+        AnalyzeOfferJob::dispatchSync($analysis->id);
+
+        $analysis->refresh();
+
+        expect($analysis->score)->toBe(50);
+        $fake->assertCallCount(0);
+    });
+
+    test('failed analysis is not reprocessed', function () {
+        $offer = Offer::factory()->forUser($this->user)->create();
+        $analysis = AiAnalysis::factory()->failed()->forOffer($offer)->create();
+
+        $fake = Prism::fake([]);
+
+        AnalyzeOfferJob::dispatchSync($analysis->id);
+
+        $analysis->refresh();
+
+        expect($analysis->status->value)->toBe('failed');
+        $fake->assertCallCount(0);
+    });
+});
+
 describe('Financial Safety', function () {
     test('analysis does not modify offer payout', function () {
         $offer = Offer::factory()->forUser($this->user)->create([
