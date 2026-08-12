@@ -28,7 +28,7 @@
             <div class="bg-white rounded-card shadow-card border border-gray-200 max-w-4xl">
                 <form method="POST" action="{{ route('campaigns.update', $campaign) }}">
                     @csrf
-                    @method('PUT')
+                    @method('PATCH')
                     @include('campaigns.partials.form', ['campaign' => $campaign, 'offers' => $offers])
                 </form>
             </div>

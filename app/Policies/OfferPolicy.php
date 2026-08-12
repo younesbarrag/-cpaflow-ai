@@ -17,6 +17,11 @@ final class OfferPolicy
         return $this->ownsOffer($user, $offer);
     }
 
+    public function restore(User $user, Offer $offer): bool
+    {
+        return $this->ownsOffer($user, $offer);
+    }
+
     public function createCampaign(User $user, Offer $offer): bool
     {
         return $this->ownsOffer($user, $offer);
