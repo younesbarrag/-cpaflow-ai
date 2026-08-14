@@ -177,11 +177,108 @@
             </div>
 
             {{-- Tab: Expenses --}}
-            <div x-show="activeTab === 'expenses'" x-cloak role="tabpanel">
+            <div x-show="activeTab === 'expenses'" x-cloak role="tabpanel" x-data="expenseManager">
 
-                <div class="mb-6">
-                    <h3 class="text-base font-semibold text-gray-900">Expenses</h3>
-                    <p class="mt-0.5 text-xs text-gray-500">Track campaign spending and keep profit calculations accurate.</p>
+                <div class="mb-6 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-base font-semibold text-gray-900">Expenses</h3>
+                        <p class="mt-0.5 text-xs text-gray-500">Track campaign spending and keep profit calculations accurate.</p>
+                    </div>
+                    <button
+                        type="button"
+                        @click="openAddForm()"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 border border-transparent rounded-lg text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:bg-brand-800 transition-colors duration-150"
+                    >
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Add Expense
+                    </button>
+                </div>
+
+                {{-- Add / Edit Form --}}
+                <div x-show="showForm" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2" class="mb-6">
+                    <div class="bg-white rounded-card shadow-card border border-gray-200 p-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-sm font-semibold text-gray-900" x-text="editingExpense ? 'Edit Expense' : 'Add Expense'"></h4>
+                            <button type="button" @click="cancelForm()" class="text-gray-400 hover:text-gray-500 transition-colors duration-150">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <form @submit.prevent="submitForm()" class="space-y-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div>
+                                    <label for="expense-amount" class="block text-xs font-medium text-gray-700 mb-1">Amount <span class="text-red-500">*</span></label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-gray-500">$</span>
+                                        <input
+                                            type="text"
+                                            id="expense-amount"
+                                            x-model="form.amount"
+                                            inputmode="decimal"
+                                            step="0.01"
+                                            min="0.01"
+                                            required
+                                            class="block w-full pl-7 pr-3 py-2 border rounded-lg text-sm shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors duration-150"
+                                            :class="formErrors.amount ? 'border-red-300' : 'border-gray-300'"
+                                        />
+                                    </div>
+                                    <template x-if="formErrors.amount">
+                                        <p class="mt-1 text-xs text-red-600" x-text="formErrors.amount[0]"></p>
+                                    </template>
+                                </div>
+                                <div>
+                                    <label for="expense-spent-at" class="block text-xs font-medium text-gray-700 mb-1">Date <span class="text-red-500">*</span></label>
+                                    <input
+                                        type="date"
+                                        id="expense-spent-at"
+                                        x-model="form.spent_at"
+                                        :max="today"
+                                        required
+                                        class="block w-full px-3 py-2 border rounded-lg text-sm shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors duration-150"
+                                        :class="formErrors.spent_at ? 'border-red-300' : 'border-gray-300'"
+                                    />
+                                    <template x-if="formErrors.spent_at">
+                                        <p class="mt-1 text-xs text-red-600" x-text="formErrors.spent_at[0]"></p>
+                                    </template>
+                                </div>
+                                <div>
+                                    <label for="expense-description" class="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                                    <input
+                                        type="text"
+                                        id="expense-description"
+                                        x-model="form.description"
+                                        maxlength="10000"
+                                        placeholder="e.g. Facebook ads"
+                                        class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors duration-150"
+                                        :class="formErrors.description ? 'border-red-300' : ''"
+                                    />
+                                    <template x-if="formErrors.description">
+                                        <p class="mt-1 text-xs text-red-600" x-text="formErrors.description[0]"></p>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-end gap-3">
+                                <button type="button" @click="cancelForm()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors duration-150">
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    :disabled="formSubmitting"
+                                    class="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 border border-transparent rounded-lg text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:bg-brand-800 transition-colors duration-150 disabled:opacity-50"
+                                >
+                                    <svg x-show="formSubmitting" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span x-text="editingExpense ? 'Save Changes' : 'Add Expense'"></span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
                 @if ($campaign->expenses->isNotEmpty())
@@ -193,6 +290,7 @@
                                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
                                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Description</th>
                                         <th class="px-6 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                                        <th class="px-6 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
@@ -201,6 +299,30 @@
                                             <td class="px-6 py-3 text-sm text-gray-500">{{ $expense->spent_at->format('M j, Y') }}</td>
                                             <td class="px-6 py-3 text-sm text-gray-700">{{ $expense->description ?? '—' }}</td>
                                             <td class="px-6 py-3 text-sm font-semibold text-gray-900 text-right">${{ number_format((float) $expense->amount, 2) }}</td>
+                                            <td class="px-6 py-3 text-right">
+                                                <div class="flex items-center justify-end gap-1">
+                                                    <button
+                                                        type="button"
+                                                        @click="openEditForm({{ json_encode(['id' => $expense->id, 'amount' => number_format((float) $expense->amount, 2, '.', ''), 'spent_at' => $expense->spent_at->format('Y-m-d'), 'description' => $expense->description]) }})"
+                                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-150"
+                                                    >
+                                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+                                                        </svg>
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        @click="deleteExpense({{ json_encode(['id' => $expense->id]) }})"
+                                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-150"
+                                                    >
+                                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                                        </svg>
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -215,7 +337,29 @@
                                     <p class="text-sm font-semibold text-gray-900">${{ number_format((float) $expense->amount, 2) }}</p>
                                     <span class="text-xs text-gray-500">{{ $expense->spent_at->format('M j, Y') }}</span>
                                 </div>
-                                <p class="text-xs text-gray-500">{{ $expense->description ?? 'No description' }}</p>
+                                <p class="text-xs text-gray-500 mb-3">{{ $expense->description ?? 'No description' }}</p>
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        @click="openEditForm({{ json_encode(['id' => $expense->id, 'amount' => number_format((float) $expense->amount, 2, '.', ''), 'spent_at' => $expense->spent_at->format('Y-m-d'), 'description' => $expense->description]) }})"
+                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-150"
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+                                        </svg>
+                                        Edit
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="deleteExpense({{ json_encode(['id' => $expense->id]) }})"
+                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-150"
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                        </svg>
+                                        Delete
+                                    </button>
+                                </div>
                             </div>
                         @endforeach
                     </div>
@@ -228,6 +372,18 @@
                         </div>
                         <h3 class="mt-4 text-base font-semibold text-gray-900">No expenses yet</h3>
                         <p class="mt-2 text-sm text-gray-500 max-w-sm mx-auto">Record campaign costs so expenses and profit stay accurate.</p>
+                        <div class="mt-6">
+                            <button
+                                type="button"
+                                @click="openAddForm()"
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 border border-transparent rounded-lg text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:bg-brand-800 transition-colors duration-150"
+                            >
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                                Add Expense
+                            </button>
+                        </div>
                     </div>
                 @endif
             </div>
@@ -478,6 +634,129 @@
                 tabs: ['overview', 'tracking', 'expenses', 'conversions', 'ai'],
                 campaignId: @js($campaign->id),
                 csrfToken: document.querySelector('meta[name="csrf-token"]').content,
+            }));
+
+            Alpine.data('expenseManager', () => ({
+                campaignId: @js($campaign->id),
+                csrfToken: document.querySelector('meta[name="csrf-token"]').content,
+                today: new Date().toISOString().split('T')[0],
+
+                showForm: false,
+                editingExpense: null,
+                form: { amount: '', spent_at: '', description: '' },
+                formErrors: {},
+                formSubmitting: false,
+
+                apiHeaders() {
+                    return {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': this.csrfToken,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    };
+                },
+
+                openAddForm() {
+                    this.editingExpense = null;
+                    this.form = { amount: '', spent_at: this.today, description: '' };
+                    this.formErrors = {};
+                    this.showForm = true;
+                    this.$nextTick(() => {
+                        const el = document.getElementById('expense-amount');
+                        if (el) el.focus();
+                    });
+                },
+
+                openEditForm(expense) {
+                    this.editingExpense = expense;
+                    this.form = {
+                        amount: expense.amount,
+                        spent_at: expense.spent_at,
+                        description: expense.description || '',
+                    };
+                    this.formErrors = {};
+                    this.showForm = true;
+                    this.$nextTick(() => {
+                        const el = document.getElementById('expense-amount');
+                        if (el) el.focus();
+                    });
+                },
+
+                cancelForm() {
+                    this.showForm = false;
+                    this.editingExpense = null;
+                    this.form = { amount: '', spent_at: '', description: '' };
+                    this.formErrors = {};
+                },
+
+                async submitForm() {
+                    this.formSubmitting = true;
+                    this.formErrors = {};
+
+                    const isEdit = this.editingExpense !== null;
+                    const url = isEdit
+                        ? '/api/v1/campaigns/' + this.campaignId + '/expenses/' + this.editingExpense.id
+                        : '/api/v1/campaigns/' + this.campaignId + '/expenses';
+
+                    const body = {
+                        amount: this.form.amount,
+                        spent_at: this.form.spent_at,
+                    };
+                    if (this.form.description) {
+                        body.description = this.form.description;
+                    } else if (!isEdit) {
+                        body.description = null;
+                    }
+
+                    try {
+                        const response = await fetch(url, {
+                            method: isEdit ? 'PATCH' : 'POST',
+                            headers: this.apiHeaders(),
+                            body: JSON.stringify(body),
+                        });
+
+                        if (response.ok) {
+                            location.reload();
+                            return;
+                        }
+
+                        if (response.status === 422) {
+                            const data = await response.json();
+                            this.formErrors = data.errors || {};
+                            return;
+                        }
+
+                        const data = await response.json().catch(() => ({}));
+                        alert(data.message || 'Something went wrong.');
+                    } catch (e) {
+                        alert('Network error. Please try again.');
+                    } finally {
+                        this.formSubmitting = false;
+                    }
+                },
+
+                async deleteExpense(expense) {
+                    if (!confirm('Are you sure you want to delete this expense?')) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/api/v1/campaigns/' + this.campaignId + '/expenses/' + expense.id, {
+                            method: 'DELETE',
+                            headers: this.apiHeaders(),
+                        });
+
+                        if (response.ok || response.status === 204) {
+                            location.reload();
+                            return;
+                        }
+
+                        const data = await response.json().catch(() => ({}));
+                        alert(data.message || 'Failed to delete expense.');
+                    } catch (e) {
+                        alert('Network error. Please try again.');
+                    }
+                },
             }));
         });
     </script>
