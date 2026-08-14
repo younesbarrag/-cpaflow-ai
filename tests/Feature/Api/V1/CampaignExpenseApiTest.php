@@ -1222,3 +1222,208 @@ it('nested child resolution cannot cross campaign boundary', function (): void {
         'id' => $expenseB->id,
     ]);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Full CRUD Flow Regression
+|--------------------------------------------------------------------------
+*/
+
+it('completes a full create update delete flow', function (): void {
+    $user = User::factory()->create();
+    $offer = Offer::factory()->for($user)->create();
+    $campaign = Campaign::factory()->for($offer)->create([
+        'status' => CampaignStatus::Active,
+    ]);
+
+    Sanctum::actingAs($user);
+
+    // Create
+    $createResponse = postJson(
+        route('api.v1.campaigns.expenses.store', $campaign),
+        [
+            'amount' => '100.00',
+            'spent_at' => now()->subDay()->toDateString(),
+            'description' => 'Original expense',
+        ]
+    );
+
+    $createResponse->assertCreated();
+
+    $expenseId = $createResponse->json('data.campaign_expense.id');
+
+    assertDatabaseHas('campaign_expenses', [
+        'id' => $expenseId,
+        'amount' => '100.00',
+        'description' => 'Original expense',
+    ]);
+
+    // Update
+    $updateResponse = patchJson(
+        route('api.v1.campaigns.expenses.update', [$campaign, $expenseId]),
+        [
+            'amount' => '250.75',
+            'description' => 'Updated expense',
+        ]
+    );
+
+    $updateResponse->assertOk();
+
+    assertDatabaseHas('campaign_expenses', [
+        'id' => $expenseId,
+        'amount' => '250.75',
+        'description' => 'Updated expense',
+    ]);
+
+    // Delete
+    deleteJson(
+        route('api.v1.campaigns.expenses.destroy', [$campaign, $expenseId])
+    )->assertNoContent();
+
+    assertDatabaseMissing('campaign_expenses', [
+        'id' => $expenseId,
+    ]);
+});
+
+it('returns correct response shape on update', function (): void {
+    $user = User::factory()->create();
+    $offer = Offer::factory()->for($user)->create();
+    $campaign = Campaign::factory()->for($offer)->create([
+        'status' => CampaignStatus::Active,
+    ]);
+
+    $expense = CampaignExpense::factory()->forCampaign($campaign)->create([
+        'amount' => '50.00',
+        'spent_at' => now()->subDays(5)->toDateString(),
+        'description' => 'Old desc',
+    ]);
+
+    Sanctum::actingAs($user);
+
+    $response = patchJson(
+        route('api.v1.campaigns.expenses.update', [$campaign, $expense]),
+        [
+            'amount' => '75.50',
+            'description' => 'New desc',
+        ]
+    );
+
+    $response->assertOk()
+        ->assertJsonStructure([
+            'data' => [
+                'campaign_expense' => [
+                    'id',
+                    'campaign_id',
+                    'amount',
+                    'spent_at',
+                    'description',
+                    'created_at',
+                    'updated_at',
+                ],
+            ],
+        ]);
+
+    $data = $response->json('data.campaign_expense');
+
+    expect($data['amount'])->toBe('75.50')
+        ->and($data['description'])->toBe('New desc')
+        ->and($data['campaign_id'])->toBe($campaign->id);
+});
+
+it('clears description when empty string is sent on update', function (): void {
+    $user = User::factory()->create();
+    $offer = Offer::factory()->for($user)->create();
+    $campaign = Campaign::factory()->for($offer)->create([
+        'status' => CampaignStatus::Active,
+    ]);
+
+    $expense = CampaignExpense::factory()->forCampaign($campaign)->create([
+        'description' => 'Something',
+    ]);
+
+    Sanctum::actingAs($user);
+
+    patchJson(
+        route('api.v1.campaigns.expenses.update', [$campaign, $expense]),
+        [
+            'description' => '',
+        ]
+    )->assertOk();
+
+    assertDatabaseHas('campaign_expenses', [
+        'id' => $expense->id,
+        'description' => null,
+    ]);
+});
+
+it('returns 422 on update with future spent_at', function (): void {
+    $user = User::factory()->create();
+    $offer = Offer::factory()->for($user)->create();
+    $campaign = Campaign::factory()->for($offer)->create([
+        'status' => CampaignStatus::Active,
+    ]);
+
+    $expense = CampaignExpense::factory()->forCampaign($campaign)->create();
+
+    Sanctum::actingAs($user);
+
+    patchJson(
+        route('api.v1.campaigns.expenses.update', [$campaign, $expense]),
+        [
+            'spent_at' => now()->addDays(5)->toDateString(),
+        ]
+    )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('spent_at');
+});
+
+it('returns 422 on update with zero amount', function (): void {
+    $user = User::factory()->create();
+    $offer = Offer::factory()->for($user)->create();
+    $campaign = Campaign::factory()->for($offer)->create([
+        'status' => CampaignStatus::Active,
+    ]);
+
+    $expense = CampaignExpense::factory()->forCampaign($campaign)->create([
+        'amount' => '50.00',
+    ]);
+
+    Sanctum::actingAs($user);
+
+    patchJson(
+        route('api.v1.campaigns.expenses.update', [$campaign, $expense]),
+        [
+            'amount' => '0',
+        ]
+    )
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('amount');
+
+    assertDatabaseHas('campaign_expenses', [
+        'id' => $expense->id,
+        'amount' => '50.00',
+    ]);
+});
+
+it('validates amount on create before sending to database', function (): void {
+    $user = User::factory()->create();
+    $offer = Offer::factory()->for($user)->create();
+    $campaign = Campaign::factory()->for($offer)->create([
+        'status' => CampaignStatus::Active,
+    ]);
+
+    Sanctum::actingAs($user);
+
+    $response = postJson(
+        route('api.v1.campaigns.expenses.store', $campaign),
+        [
+            'amount' => 'abc',
+            'spent_at' => now()->subDay()->toDateString(),
+        ]
+    );
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors('amount');
+
+    assertDatabaseCount('campaign_expenses', 0);
+});
