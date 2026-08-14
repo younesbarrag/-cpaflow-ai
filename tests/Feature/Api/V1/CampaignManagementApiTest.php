@@ -907,6 +907,85 @@ it('returns 403 when another user tries to suspend a campaign', function () {
     ]);
 });
 
+it('allows updating name traffic_source and budget while keeping the original offer', function () {
+    $user = User::factory()->create();
+
+    $offer = Offer::factory()->create([
+        'user_id' => $user->id,
+    ]);
+
+    $campaign = Campaign::factory()->create([
+        'offer_id' => $offer->id,
+        'name' => 'Original Campaign',
+        'traffic_source' => 'Facebook Ads',
+        'budget' => '500.00',
+        'status' => CampaignStatus::Draft,
+    ]);
+
+    Sanctum::actingAs($user);
+
+    $response = $this->patchJson(
+        route('api.v1.campaigns.update', $campaign),
+        [
+            'name' => 'Updated Campaign',
+            'traffic_source' => 'Google Ads',
+            'budget' => '1200.00',
+        ],
+    );
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('data.campaign.name', 'Updated Campaign')
+        ->assertJsonPath('data.campaign.traffic_source', 'Google Ads')
+        ->assertJsonPath('data.campaign.budget', '1200.00')
+        ->assertJsonPath('data.campaign.offer.id', $offer->id);
+
+    $this->assertDatabaseHas('campaigns', [
+        'id' => $campaign->id,
+        'offer_id' => $offer->id,
+        'name' => 'Updated Campaign',
+        'traffic_source' => 'Google Ads',
+        'budget' => '1200.00',
+    ]);
+});
+
+it('rejects offer_id sent explicitly during campaign update', function () {
+    $user = User::factory()->create();
+
+    $originalOffer = Offer::factory()->create([
+        'user_id' => $user->id,
+    ]);
+
+    $otherOffer = Offer::factory()->create([
+        'user_id' => $user->id,
+    ]);
+
+    $campaign = Campaign::factory()->create([
+        'offer_id' => $originalOffer->id,
+        'name' => 'Stable Campaign',
+    ]);
+
+    Sanctum::actingAs($user);
+
+    $response = $this->patchJson(
+        route('api.v1.campaigns.update', $campaign),
+        [
+            'name' => 'Name Change',
+            'offer_id' => $otherOffer->id,
+        ],
+    );
+
+    $response
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['offer_id']);
+
+    $this->assertDatabaseHas('campaigns', [
+        'id' => $campaign->id,
+        'offer_id' => $originalOffer->id,
+        'name' => 'Stable Campaign',
+    ]);
+});
+
 it('returns 404 when activating a missing campaign', function () {
     $user = User::factory()->create();
 
