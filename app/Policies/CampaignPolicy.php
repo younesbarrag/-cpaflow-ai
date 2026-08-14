@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\UserRole;
 use App\Models\Campaign;
 use App\Models\User;
 
@@ -64,11 +65,11 @@ final class CampaignPolicy
 
     public function approveConversion(User $user, Campaign $campaign): bool
     {
-        return $this->ownsCampaign($user, $campaign);
+        return $user->role === UserRole::Admin;
     }
 
     public function rejectConversion(User $user, Campaign $campaign): bool
     {
-        return $this->ownsCampaign($user, $campaign);
+        return $user->role === UserRole::Admin;
     }
 }

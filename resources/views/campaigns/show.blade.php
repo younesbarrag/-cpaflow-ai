@@ -390,6 +390,59 @@
 
             {{-- Tab: Conversions --}}
             <div x-show="activeTab === 'conversions'" x-cloak role="tabpanel">
+                @php
+                    $signer = app(\App\Services\PostbackSigner::class);
+                @endphp
+
+                {{-- Postback URL Section --}}
+                <div class="mb-6 bg-white rounded-card shadow-card border border-gray-200 p-5">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50">
+                            <svg class="h-4 w-4 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-900">Conversion Postback</h3>
+                            <p class="text-xs text-gray-500">Give this URL to your affiliate network to report successful conversions.</p>
+                        </div>
+                    </div>
+
+                    @if ($campaign->trackingLinks->isNotEmpty())
+                        <div class="space-y-3">
+                            @foreach ($campaign->trackingLinks as $link)
+                                @php
+                                    $token = $signer->tokenFor($link->code);
+                                    $baseUrl = route('postback.conversion', $link->code);
+                                    $postbackTemplate = $baseUrl . '?external_id={external_id}&source={source}&token=' . $token;
+                                @endphp
+                                <div class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200" x-data="{ copied: false }">
+                                    <code class="flex-1 text-xs text-gray-700 break-all font-mono">{{ $postbackTemplate }}</code>
+                                    <button
+                                        type="button"
+                                        @click="
+                                            navigator.clipboard.writeText(@js($postbackTemplate));
+                                            copied = true;
+                                            setTimeout(() => { copied = false }, 2000);
+                                        "
+                                        class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-150 flex-shrink-0"
+                                    >
+                                        <svg x-show="!copied" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+                                        </svg>
+                                        <svg x-show="copied" x-cloak class="w-3.5 h-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                        <span x-text="copied ? 'Copied' : 'Copy'"></span>
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-sm text-gray-500">Generate a tracking link first to create a postback URL.</p>
+                    @endif
+                </div>
+
                 @if ($campaign->conversions->isNotEmpty())
                     <div class="bg-white rounded-card shadow-card border border-gray-200 overflow-hidden">
                         <div class="overflow-x-auto">
@@ -401,7 +454,6 @@
                                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Revenue</th>
                                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                                        <th class="px-6 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
@@ -414,74 +466,6 @@
                                                 <x-status-badge :status="$conversion->status->value" />
                                             </td>
                                             <td class="px-6 py-3 text-sm text-gray-500">{{ $conversion->converted_at->format('M j, Y g:i A') }}</td>
-                                            <td class="px-6 py-3 text-right">
-                                                @if ($conversion->status->value === 'pending')
-                                                    <div class="flex items-center justify-end gap-1" x-data="{ processing: false }">
-                                                        <button
-                                                            type="button"
-                                                            :disabled="processing"
-                                                            @click="
-                                                                processing = true;
-                                                                fetch('{{ route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]) }}', {
-                                                                    method: 'POST',
-                                                                    headers: {
-                                                                        'Content-Type': 'application/json',
-                                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=&quot;csrf-token&quot;]').content,
-                                                                        'Accept': 'application/json'
-                                                                    }
-                                                                })
-                                                                .then(r => {
-                                                                    if (r.ok) return r.json();
-                                                                    throw r;
-                                                                })
-                                                                .then(() => { location.reload(); })
-                                                                .catch(async (e) => {
-                                                                    const body = await e.json().catch(() => ({}));
-                                                                    alert(body.message || 'Failed to approve conversion.');
-                                                                    processing = false;
-                                                                });
-                                                            "
-                                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors duration-150 disabled:opacity-50"
-                                                        >
-                                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                                            </svg>
-                                                            Approve
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            :disabled="processing"
-                                                            @click="
-                                                                processing = true;
-                                                                fetch('{{ route('api.v1.campaigns.conversions.reject', [$campaign, $conversion]) }}', {
-                                                                    method: 'POST',
-                                                                    headers: {
-                                                                        'Content-Type': 'application/json',
-                                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=&quot;csrf-token&quot;]').content,
-                                                                        'Accept': 'application/json'
-                                                                    }
-                                                                })
-                                                                .then(r => {
-                                                                    if (r.ok) return r.json();
-                                                                    throw r;
-                                                                })
-                                                                .then(() => { location.reload(); })
-                                                                .catch(async (e) => {
-                                                                    const body = await e.json().catch(() => ({}));
-                                                                    alert(body.message || 'Failed to reject conversion.');
-                                                                    processing = false;
-                                                                });
-                                                            "
-                                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-150 disabled:opacity-50"
-                                                        >
-                                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                                            </svg>
-                                                            Reject
-                                                        </button>
-                                                    </div>
-                                                @endif
-                                            </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -496,7 +480,7 @@
                             </svg>
                         </div>
                         <h3 class="mt-4 text-base font-semibold text-gray-900">No conversions yet</h3>
-                        <p class="mt-2 text-sm text-gray-500 max-w-sm mx-auto">Conversions will appear here as they are recorded through your tracking links.</p>
+                        <p class="mt-2 text-sm text-gray-500 max-w-sm mx-auto">Conversions reported by your affiliate network through the campaign postback URL will appear here for review.</p>
                     </div>
                 @endif
             </div>

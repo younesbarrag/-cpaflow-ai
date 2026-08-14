@@ -36,31 +36,53 @@ it('rejects unauthenticated reject request', function (): void {
 
 /*
 |--------------------------------------------------------------------------
-| Security: Foreign Affiliate
+| Security: Non-Admin User (including owner)
 |--------------------------------------------------------------------------
 */
 
-it('rejects foreign affiliate approving conversion', function (): void {
-    $owner = User::factory()->create();
-    $foreignUser = User::factory()->create();
-    $offer = Offer::factory()->for($owner)->create();
+it('rejects affiliate approving conversion', function (): void {
+    $user = User::factory()->create();
+    $offer = Offer::factory()->for($user)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create();
 
-    Sanctum::actingAs($foreignUser);
+    Sanctum::actingAs($user);
 
     postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]))
         ->assertForbidden();
 });
 
-it('rejects foreign affiliate rejecting conversion', function (): void {
+it('rejects affiliate rejecting conversion', function (): void {
+    $user = User::factory()->create();
+    $offer = Offer::factory()->for($user)->create();
+    $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
+    $conversion = Conversion::factory()->forCampaign($campaign)->create();
+
+    Sanctum::actingAs($user);
+
+    postJson(route('api.v1.campaigns.conversions.reject', [$campaign, $conversion]))
+        ->assertForbidden();
+});
+
+it('rejects campaign owner approving conversion', function (): void {
     $owner = User::factory()->create();
-    $foreignUser = User::factory()->create();
     $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create();
 
-    Sanctum::actingAs($foreignUser);
+    Sanctum::actingAs($owner);
+
+    postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]))
+        ->assertForbidden();
+});
+
+it('rejects campaign owner rejecting conversion', function (): void {
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
+    $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
+    $conversion = Conversion::factory()->forCampaign($campaign)->create();
+
+    Sanctum::actingAs($owner);
 
     postJson(route('api.v1.campaigns.conversions.reject', [$campaign, $conversion]))
         ->assertForbidden();
@@ -68,11 +90,11 @@ it('rejects foreign affiliate rejecting conversion', function (): void {
 
 /*
 |--------------------------------------------------------------------------
-| Security: Admin on Foreign Campaign
+| Security: Admin on Any Campaign (Allowed)
 |--------------------------------------------------------------------------
 */
 
-it('rejects admin approving conversion on foreign campaign', function (): void {
+it('allows admin to approve conversion on any campaign', function (): void {
     $owner = User::factory()->create();
     $admin = User::factory()->admin()->create();
     $offer = Offer::factory()->for($owner)->create();
@@ -82,10 +104,10 @@ it('rejects admin approving conversion on foreign campaign', function (): void {
     Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]))
-        ->assertForbidden();
+        ->assertOk();
 });
 
-it('rejects admin rejecting conversion on foreign campaign', function (): void {
+it('allows admin to reject conversion on any campaign', function (): void {
     $owner = User::factory()->create();
     $admin = User::factory()->admin()->create();
     $offer = Offer::factory()->for($owner)->create();
@@ -95,7 +117,7 @@ it('rejects admin rejecting conversion on foreign campaign', function (): void {
     Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.reject', [$campaign, $conversion]))
-        ->assertForbidden();
+        ->assertOk();
 });
 
 /*
@@ -105,26 +127,28 @@ it('rejects admin rejecting conversion on foreign campaign', function (): void {
 */
 
 it('returns 404 when approving conversion from wrong campaign', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaignA = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $campaignB = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaignB)->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.approve', [$campaignA, $conversion]))
         ->assertNotFound();
 });
 
 it('returns 404 when rejecting conversion from wrong campaign', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaignA = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $campaignB = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaignB)->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.reject', [$campaignA, $conversion]))
         ->assertNotFound();
@@ -136,13 +160,14 @@ it('returns 404 when rejecting conversion from wrong campaign', function (): voi
 |--------------------------------------------------------------------------
 */
 
-it('allows owner to approve a pending conversion', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+it('allows admin to approve a pending conversion', function (): void {
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     $response = postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]));
 
@@ -156,12 +181,13 @@ it('allows owner to approve a pending conversion', function (): void {
 });
 
 it('returns ConversionResource shape on approve', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]))
         ->assertOk()
@@ -183,14 +209,15 @@ it('returns ConversionResource shape on approve', function (): void {
 });
 
 it('preserves revenue after approval', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create([
         'revenue' => '42.50',
     ]);
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]))
         ->assertOk();
@@ -200,15 +227,16 @@ it('preserves revenue after approval', function (): void {
 });
 
 it('preserves converted_at after approval', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $originalConvertedAt = now()->subDays(10);
     $conversion = Conversion::factory()->forCampaign($campaign)->create([
         'converted_at' => $originalConvertedAt,
     ]);
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]))
         ->assertOk();
@@ -224,12 +252,13 @@ it('preserves converted_at after approval', function (): void {
 */
 
 it('returns 200 when approving an already approved conversion', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->approved()->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     $response = postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]));
 
@@ -238,14 +267,15 @@ it('returns 200 when approving an already approved conversion', function (): voi
 });
 
 it('does not modify conversion on idempotent approve', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->approved()->create([
         'revenue' => '25.00',
     ]);
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     $originalUpdatedAt = $conversion->updated_at;
 
@@ -263,13 +293,14 @@ it('does not modify conversion on idempotent approve', function (): void {
 |--------------------------------------------------------------------------
 */
 
-it('allows owner to reject a pending conversion', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+it('allows admin to reject a pending conversion', function (): void {
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     $response = postJson(route('api.v1.campaigns.conversions.reject', [$campaign, $conversion]));
 
@@ -283,12 +314,13 @@ it('allows owner to reject a pending conversion', function (): void {
 });
 
 it('returns ConversionResource shape on reject', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.reject', [$campaign, $conversion]))
         ->assertOk()
@@ -310,14 +342,15 @@ it('returns ConversionResource shape on reject', function (): void {
 });
 
 it('preserves revenue after rejection', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create([
         'revenue' => '33.75',
     ]);
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.reject', [$campaign, $conversion]))
         ->assertOk();
@@ -327,15 +360,16 @@ it('preserves revenue after rejection', function (): void {
 });
 
 it('preserves converted_at after rejection', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $originalConvertedAt = now()->subDays(5);
     $conversion = Conversion::factory()->forCampaign($campaign)->create([
         'converted_at' => $originalConvertedAt,
     ]);
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.reject', [$campaign, $conversion]))
         ->assertOk();
@@ -351,12 +385,13 @@ it('preserves converted_at after rejection', function (): void {
 */
 
 it('returns 200 when rejecting an already rejected conversion', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->rejected()->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     $response = postJson(route('api.v1.campaigns.conversions.reject', [$campaign, $conversion]));
 
@@ -371,12 +406,13 @@ it('returns 200 when rejecting an already rejected conversion', function (): voi
 */
 
 it('returns 409 when rejecting an approved conversion', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->approved()->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     $response = postJson(route('api.v1.campaigns.conversions.reject', [$campaign, $conversion]));
 
@@ -389,12 +425,13 @@ it('returns 409 when rejecting an approved conversion', function (): void {
 });
 
 it('returns 409 when approving a rejected conversion', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->rejected()->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     $response = postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]));
 
@@ -407,14 +444,15 @@ it('returns 409 when approving a rejected conversion', function (): void {
 });
 
 it('does not modify conversion on conflict', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->approved()->create([
         'revenue' => '50.00',
     ]);
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.reject', [$campaign, $conversion]))
         ->assertStatus(409);
@@ -431,8 +469,9 @@ it('does not modify conversion on conflict', function (): void {
 */
 
 it('does not recalculate revenue after approval', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create(['payout' => '25.00']);
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create(['payout' => '25.00']);
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create([
         'revenue' => '25.00',
@@ -440,7 +479,7 @@ it('does not recalculate revenue after approval', function (): void {
 
     $offer->update(['payout' => '50.00']);
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]))
         ->assertOk();
@@ -488,20 +527,22 @@ it('pending conversion contributes zero revenue', function (): void {
 });
 
 it('approving a conversion increases revenue', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
-
-    Sanctum::actingAs($user);
-
-    $before = getJson(route('api.v1.dashboard.statistics'));
-    $revenueBefore = (float) $before->json('data.statistics.revenue');
 
     $conversion = Conversion::factory()->forCampaign($campaign)->create(['revenue' => '75.00']);
 
+    Sanctum::actingAs($owner);
+    $before = getJson(route('api.v1.dashboard.statistics'));
+    $revenueBefore = (float) $before->json('data.statistics.revenue');
+
+    Sanctum::actingAs($admin);
     postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]))
         ->assertOk();
 
+    Sanctum::actingAs($owner);
     $after = getJson(route('api.v1.dashboard.statistics'));
     $revenueAfter = (float) $after->json('data.statistics.revenue');
 
@@ -509,20 +550,22 @@ it('approving a conversion increases revenue', function (): void {
 });
 
 it('approving a conversion increases profit', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
-
-    Sanctum::actingAs($user);
-
-    $before = getJson(route('api.v1.dashboard.statistics'));
-    $profitBefore = (float) $before->json('data.statistics.profit');
 
     $conversion = Conversion::factory()->forCampaign($campaign)->create(['revenue' => '60.00']);
 
+    Sanctum::actingAs($owner);
+    $before = getJson(route('api.v1.dashboard.statistics'));
+    $profitBefore = (float) $before->json('data.statistics.profit');
+
+    Sanctum::actingAs($admin);
     postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]))
         ->assertOk();
 
+    Sanctum::actingAs($owner);
     $after = getJson(route('api.v1.dashboard.statistics'));
     $profitAfter = (float) $after->json('data.statistics.profit');
 
@@ -530,12 +573,13 @@ it('approving a conversion increases profit', function (): void {
 });
 
 it('conversion_count unchanged after approval', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     $before = getJson(route('api.v1.dashboard.statistics'));
     $countBefore = $before->json('data.statistics.conversion_count');
@@ -550,36 +594,39 @@ it('conversion_count unchanged after approval', function (): void {
 });
 
 it('rejected conversion contributes zero revenue', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create(['revenue' => '100.00']);
 
-    Sanctum::actingAs($user);
-
+    Sanctum::actingAs($admin);
     postJson(route('api.v1.campaigns.conversions.reject', [$campaign, $conversion]))
         ->assertOk();
 
+    Sanctum::actingAs($owner);
     $response = getJson(route('api.v1.dashboard.statistics'));
     $revenue = (float) $response->json('data.statistics.revenue');
     expect($revenue)->toBe(0.0);
 });
 
 it('rejection does not change profit', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
 
-    Sanctum::actingAs($user);
-
+    Sanctum::actingAs($owner);
     $before = getJson(route('api.v1.dashboard.statistics'));
     $profitBefore = (float) $before->json('data.statistics.profit');
 
     $conversion = Conversion::factory()->forCampaign($campaign)->create(['revenue' => '100.00']);
 
+    Sanctum::actingAs($admin);
     postJson(route('api.v1.campaigns.conversions.reject', [$campaign, $conversion]))
         ->assertOk();
 
+    Sanctum::actingAs($owner);
     $after = getJson(route('api.v1.dashboard.statistics'));
     $profitAfter = (float) $after->json('data.statistics.profit');
 
@@ -593,15 +640,16 @@ it('rejection does not change profit', function (): void {
 */
 
 it('approval does not change converted_at', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $historicalDate = now()->subDays(30);
     $conversion = Conversion::factory()->forCampaign($campaign)->create([
         'converted_at' => $historicalDate,
     ]);
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]))
         ->assertOk();
@@ -617,12 +665,13 @@ it('approval does not change converted_at', function (): void {
 */
 
 it('action uses current persisted state under lock', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]))
         ->assertOk();
@@ -632,12 +681,13 @@ it('action uses current persisted state under lock', function (): void {
 });
 
 it('competing approve/reject cannot silently overwrite', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]))
         ->assertOk();
@@ -650,12 +700,13 @@ it('competing approve/reject cannot silently overwrite', function (): void {
 });
 
 it('second opposite transition receives 409', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.reject', [$campaign, $conversion]))
         ->assertOk();
@@ -665,12 +716,13 @@ it('second opposite transition receives 409', function (): void {
 });
 
 it('concurrent same-target transition behaves idempotently', function (): void {
-    $user = User::factory()->create();
-    $offer = Offer::factory()->for($user)->create();
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $offer = Offer::factory()->for($owner)->create();
     $campaign = Campaign::factory()->for($offer)->create(['status' => CampaignStatus::Active]);
     $conversion = Conversion::factory()->forCampaign($campaign)->create();
 
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($admin);
 
     postJson(route('api.v1.campaigns.conversions.approve', [$campaign, $conversion]))
         ->assertOk();
