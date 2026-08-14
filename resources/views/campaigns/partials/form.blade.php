@@ -17,7 +17,6 @@
                 Offer <span class="text-red-500">*</span>
             </label>
             @if ($isEdit)
-                <input type="hidden" name="offer_id" value="{{ $campaign->offer_id }}" />
                 <div class="mt-1 block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
                     {{ $campaign->offer->name ?? 'Unknown offer' }}
                 </div>

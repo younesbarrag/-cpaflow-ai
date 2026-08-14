@@ -144,6 +144,42 @@ describe('Campaign Web — Edit', function () {
         ]);
     });
 
+    test('edit form does not send a hidden offer_id', function () {
+        $offer = Offer::factory()->for($this->user)->create();
+        $campaign = Campaign::factory()->for($offer)->create(['name' => 'No Hidden Offer']);
+
+        $response = $this->actingAs($this->user)->get(route('campaigns.edit', $campaign));
+        $response->assertOk();
+        $response->assertDontSee('name="offer_id"');
+        $response->assertSee('Offer cannot be changed after creation.');
+    });
+
+    test('campaign update preserves original offer without sending offer_id', function () {
+        $offer = Offer::factory()->for($this->user)->create();
+        $campaign = Campaign::factory()->for($offer)->create([
+            'name' => 'Original',
+            'traffic_source' => 'Facebook Ads',
+            'budget' => '500.00',
+        ]);
+
+        $response = $this->actingAs($this->user)->patch(route('campaigns.update', $campaign), [
+            'name' => 'Renamed',
+            'traffic_source' => 'Google Ads',
+            'budget' => '800.00',
+        ]);
+
+        $response->assertRedirect(route('campaigns.index'));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('campaigns', [
+            'id' => $campaign->id,
+            'offer_id' => $offer->id,
+            'name' => 'Renamed',
+            'traffic_source' => 'Google Ads',
+            'budget' => '800.00',
+        ]);
+    });
+
     test('foreign campaign cannot be edited', function () {
         $otherUser = User::factory()->create();
         $offer = Offer::factory()->for($otherUser)->create();
