@@ -1,14 +1,20 @@
 <?php
 
+use App\Http\Controllers\Admin\ConversionReviewController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OfferController;
+use App\Http\Controllers\PostbackConversionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RedirectTrackingLinkController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/t/{code}', RedirectTrackingLinkController::class)
     ->name('tracking.redirect');
+
+Route::get('/postback/{code}', PostbackConversionController::class)
+    ->middleware('throttle:postback')
+    ->name('postback.conversion');
 
 Route::get('/', function () {
     return view('welcome');
@@ -42,6 +48,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/campaigns/{campaign}/activate', [CampaignController::class, 'activate'])->name('campaigns.activate');
     Route::post('/campaigns/{campaign}/suspend', [CampaignController::class, 'suspend'])->name('campaigns.suspend');
     Route::post('/campaigns/{campaign}/tracking-links', [CampaignController::class, 'storeTrackingLink'])->name('campaigns.tracking-links.store');
+});
+
+Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/conversions', [ConversionReviewController::class, 'index'])->name('conversions.index');
 });
 
 require __DIR__.'/auth.php';

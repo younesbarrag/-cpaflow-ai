@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ConversionStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,6 +28,11 @@ final class Conversion extends Model
             'status' => ConversionStatus::class,
             'converted_at' => 'datetime',
         ];
+    }
+
+    public function scopePending(Builder $query): Builder
+    {
+        return $query->where('status', ConversionStatus::Pending);
     }
 
     public function campaign(): BelongsTo
